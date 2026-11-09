@@ -54,6 +54,8 @@ class MotorDriver {
 
  private:
   void writeOutput(int32_t milli);
+  void writePins(uint16_t d1, uint16_t d2);  // ledcWrite only on change
+  void applyPendingInvert();
   uint8_t in1_ = 0, in2_ = 0;
   const char* tag_ = "";
   Config cfg_;
@@ -63,7 +65,9 @@ class MotorDriver {
   uint32_t overrideRampMs_ = 0;  // 0 = none
   uint32_t lastTickMs_ = 0;
   bool braking_ = false;
-  int32_t lastWritten_ = 0x7fffffff;
+  bool begun_ = false;
+  int32_t lastWritten_ = 0x7fffffff;  // ramp value of the last writeOutput (sentinel = force)
+  uint16_t duty1_ = 0xffff, duty2_ = 0xffff;  // last PWM per input (0xffff = unknown)
 };
 
 extern MotorDriver rotorMotor;
