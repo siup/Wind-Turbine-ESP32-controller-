@@ -1,5 +1,5 @@
 // Serial console (stage 1 bench tests and debugging). Lines are turned into
-// protocol frames and pushed to CmdQueue with Source::Serial:
+// protocol frames and pushed to CmdQueue with Source::Console:
 //   r<0-100>   rotor speed            ({"t":"rotor","speed":N})
 //   rb         rotor stop with brake
 //   yl / yr    yaw left / right (deadman fed by `ka` or repeated lines)
