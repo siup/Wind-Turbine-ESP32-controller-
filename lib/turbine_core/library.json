@@ -5,6 +5,6 @@
   "frameworks": "*",
   "platforms": "*",
   "build": {
-    "flags": ["-Wall", "-Wextra"]
+    "flags": ["-Wall", "-Wextra", "-I$PROJECT_INCLUDE_DIR"]
   }
 }

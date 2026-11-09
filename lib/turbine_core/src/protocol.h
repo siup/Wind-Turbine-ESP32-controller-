@@ -48,7 +48,9 @@ enum class Err : uint8_t {
 enum class FsReason : uint8_t { None = 0, Runtime, Timeout, Disconnect, Battery, Ota };
 
 // Where an inbound frame came from.
-enum class Source : uint8_t { None, Ws, Http, Ble, Serial };
+// Console = the Serial console. (Not named "Serial": the Arduino core defines
+// Serial as a macro on some targets.)
+enum class Source : uint8_t { None, Ws, Http, Ble, Console };
 
 const char* cmdName(Cmd c);            // "rotor", ... ; "unknown" for None
 const char* errCode(Err e);            // "bad_json", ... ; "" for None
