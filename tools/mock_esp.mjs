@@ -26,8 +26,10 @@
 // /__mock/set keys: bat (V, 0 = no battery), instant (bool: restart the
 // battery average so the new value shows within 1-2 s), pos (true nacelle
 // angle, deg), magnet (bool, AS5600), sensorReversed (bool: the AS5600 is
-// mounted the other way), endL / endR (bool forces a switch, null = from
-// the position), lag (ms), noWs (bool), drain (bool), sag (bool), verbose.
+// mounted the other way), motorReversed (bool: the yaw motor is wired the
+// other way; yawInvert flips the physical direction too, as on the device),
+// endL / endR (bool forces a switch, null = from the position), lag (ms),
+// noWs (bool), drain (bool), sag (bool), verbose.
 
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -131,6 +133,13 @@ const YAW_SPEED_MAX_PCT = 100;
 const YAW_HOLD_TIMEOUT_MS = 700;
 const YAW_CAL_MIN_MS = 500;
 const ENDSTOP_DEBOUNCE_MS = 20;
+const ENDSTOP_RELEASE_DEG = 15;
+const ENDSTOP_RELEASE_MIN_MS = 300;
+const ENDSTOP_RELEASE_MS = 1500;
+const ENDSTOP_SETTLE_MS = 150;  // EndstopSideCheck::kSettleMs
+const SEQ_SLOTS = 4;            // StopSeqGuard
+const SEQ_WINDOW_MS = 60000;
+const ESTOP_LOG_GAP_MS = 1000;
 const AS5600_PERIOD_MS = 50;
 const AS_RETRY_MS = 500;
 const AS_COUNTS = 4096;
@@ -162,7 +171,7 @@ const WS_KEEP = 4;
 const SILENT_CHECK_MS = 100;
 const HOUSEKEEP_MS = 1000;
 const EVENT_LOG_SIZE = 20;
-const LOG_FRAME_CAP = 2048;
+const LOG_FRAME_CAP = 2304;  // commands.cpp g_logBuf
 const AP_SSID_PREFIX = 'Turbina-';
 const AP_PASSWORD = 'turbina123';
 const OTA_USER = 'admin';
@@ -198,6 +207,7 @@ const knobs = {
   verbose: opt.verbose,
   magnet: true,
   sensorReversed: false,
+  motorReversed: false,
   endL: null,
   endR: null,
   drain: true,
@@ -339,6 +349,7 @@ const ERR_MSG = {
   twist_limit: 'cable twist limit reached',
   endstop: 'endstop reached',
   busy: 'motors running or queue full',
+  stale: 'sent before the last stop, ignored',
 };
 
 // Best-effort "t" of a frame that may be truncated (peekCommandType).
@@ -388,6 +399,13 @@ function parseCommand(text, base) {
   if (!CMDS.includes(t)) return parseFail('unknown_cmd', null, cmd);
   cmd.type = t;
   if (idBad) return parseFail('bad_type', 'id', cmd);
+  cmd.hasSeq = false;
+  const sq = own(obj, 'seq');
+  if (present(sq)) {
+    if (!(Number.isInteger(sq) && sq >= 0 && sq <= 0xffffffff)) return parseFail('bad_type', 'seq', cmd);
+    cmd.hasSeq = true;
+    cmd.seq = sq;
+  }
 
   let r = null;
   if (t === 'rotor') r = parseRotor(obj, cmd);
@@ -982,6 +1000,75 @@ class EndstopDebouncer {
   }
 }
 
+// lib/turbine_core/src/yaw_logic.cpp EndstopSideCheck: a switch that closes
+// while the yaw drives away from it (or stays closed while it does) means
+// the motor turns the other way; that direction is refused.
+class EndstopSideCheck {
+  constructor() { this.reset(); }
+
+  reset() {
+    this.refused = 0;
+    this.held = 0;
+    this.heldBal = 0;
+    this.droveL = false;
+    this.droveR = false;
+    this.lastL = 0;
+    this.lastR = 0;
+  }
+
+  moveStarted(dir, lActive, rActive, balance) {
+    this.held = 0;
+    if (lActive && !rActive && dir > 0) this.held = -1;
+    if (rActive && !lActive && dir < 0) this.held = 1;
+    this.heldBal = balance;
+  }
+
+  recently(side, now) {
+    return side < 0 ? this.droveL && now - this.lastL < ENDSTOP_SETTLE_MS : this.droveR && now - this.lastR < ENDSTOP_SETTLE_MS;
+  }
+
+  blocked(dir) { return dir !== 0 && dir === this.refused; }
+
+  // in: { now, drive, commanded, lActive, rActive, lRose, rRose, balance, releaseTravel }
+  update(inp) {
+    const r = { wrong: 0, refL: false, refR: false };
+    if (inp.drive < 0) {
+      this.droveL = true;
+      this.lastL = inp.now;
+    } else if (inp.drive > 0) {
+      this.droveR = true;
+      this.lastR = inp.now;
+    }
+    const edge = (side) => {
+      const toward = inp.drive === side || this.recently(side, inp.now);
+      const away = inp.drive === -side || (inp.drive === 0 && this.recently(-side, inp.now));
+      if (away && !toward) r.wrong = -side;
+      else if (away) {
+        this.held = side;
+        this.heldBal = inp.balance;
+      } else if (side < 0) r.refL = true;
+      else r.refR = true;
+    };
+    if (inp.lRose) edge(-1);
+    if (inp.rRose) edge(1);
+    if (r.wrong === 0 && this.held !== 0) {
+      const closed = this.held < 0 ? inp.lActive : inp.rActive;
+      if (!closed || inp.commanded === 0) this.held = 0;
+      else if (inp.commanded === -this.held && inp.drive === -this.held && Math.abs(inp.balance - this.heldBal) >= inp.releaseTravel) {
+        r.wrong = -this.held;
+      }
+    }
+    if (r.wrong !== 0) {
+      this.refused = r.wrong;
+      this.held = 0;
+      r.refL = r.refR = false;
+    } else if (this.refused !== 0 && !inp.lActive && !inp.rActive) {
+      this.refused = 0;
+    }
+    return r;
+  }
+}
+
 function median3(a, b, c) {
   if (a > b) [a, b] = [b, a];
   if (c <= a) return a;
@@ -1080,7 +1167,9 @@ class Physics {
     const dt = Math.min(t - this.lastAt, 200);
     this.lastAt = t;
     if (yawMilli) {
-      this.truePos += ((yawMilli / Ramp.FULL) * 360 / PHYS_MS360) * dt;
+      // yawInvert is applied at the bridge output, the wiring is the knob.
+      const dir = (s.yawInvert ? -1 : 1) * (knobs.motorReversed ? -1 : 1);
+      this.truePos += ((dir * yawMilli / Ramp.FULL) * 360 / PHYS_MS360) * dt;
       if (opt.sensor === 'endstops') this.truePos = clamp(this.truePos, -HARD_STOP_DEG, HARD_STOP_DEG);
     }
     this.rotorLoad = (Math.abs(rotorMilli) / Ramp.FULL) * (s.rotorDuty / 255);
@@ -1176,6 +1265,7 @@ class Yaw {
     this.lastIntegrateMs = 0;
     this.endL = new EndstopDebouncer();
     this.endR = new EndstopDebouncer();
+    this.side = new EndstopSideCheck();
     // AS5600
     this.asOk = false;
     this.asReported = false;
@@ -1232,16 +1322,22 @@ class Yaw {
 
   endstopBlocked(d) {
     if (!this.endstops || d === 0) return false;
+    if (this.side.blocked(d)) return true;
     return d < 0 ? this.endL.stable : this.endR.stable;
   }
 
+  // AS5600 angle against yawMaxDeg when valid and set, else the time balance.
   twistBlocked(d) {
     if (d === 0) return false;
-    if (this.angleValid()) {
-      if (this.maxDeg === 0) return false;
+    if (this.angleValid() && this.maxDeg > 0) {
       return d > 0 ? this.cont >= this.maxDeg : this.cont <= -this.maxDeg;
     }
     return this.bal.blocked(d, this.maxBal);
+  }
+
+  endReleaseTravel() {
+    if (this.ms360 === 0) return ENDSTOP_RELEASE_MS;
+    return Math.max(Math.floor((this.ms360 * ENDSTOP_RELEASE_DEG + 180) / 360), ENDSTOP_RELEASE_MIN_MS);
   }
 
   integrate(now) {
@@ -1401,6 +1497,7 @@ class Yaw {
     this.sensRev = next.yawSensRev;
     if (invertChanged || revChanged) {
       if (!this.idle()) this.stopNow(true);
+      if (invertChanged) this.side.reset();
       this.zeroPosition();
       this.persist();
       this.ev.add('w', 'yaw_zeroed', `${invertChanged ? 'yawInvert' : 'yawSensRev'} changed`);
@@ -1421,6 +1518,9 @@ class Yaw {
       return e;
     }
     this.gotoActive = false;
+    if (this.endstops && !(this.holdArmed && this.dir === dir)) {
+      this.side.moveStarted(dir, this.endL.stable, this.endR.stable, this.bal.balance());
+    }
     this.setDrive(dir, clamp(speedPct || this.speedDefault, YAW_SPEED_MIN_PCT, YAW_SPEED_MAX_PCT));
     this.holdArmed = true;
     this.lastHoldMs = now;
@@ -1493,8 +1593,17 @@ class Yaw {
     if (this.endstops) {
       this.endL.update(phys.endstopRaw(-1), now, ENDSTOP_DEBOUNCE_MS);
       this.endR.update(phys.endstopRaw(1), now, ENDSTOP_DEBOUNCE_MS);
-      if (this.endL.rose) this.bal.onEndstop(-1);
-      if (this.endR.rose) this.bal.onEndstop(1);
+      const r = this.side.update({
+        now, drive: sign(this.motor.actualMilli()), commanded: this.dir,
+        lActive: this.endL.stable, rActive: this.endR.stable, lRose: this.endL.rose, rRose: this.endR.rose,
+        balance: this.bal.balance(), releaseTravel: this.endReleaseTravel(),
+      });
+      if (r.refL) this.bal.onEndstop(-1);
+      if (r.refR) this.bal.onEndstop(1);
+      if (r.wrong !== 0) {
+        this.stopNow(true);
+        this.ev.add('e', 'yaw_end_dir', `switch ${r.wrong < 0 ? 'R' : 'L'} while going ${sideName(r.wrong)}, both ways blocked`);
+      }
     }
     if (this.as5600 && now - this.asNextMs >= 0) {
       this.asNextMs = now + AS5600_PERIOD_MS;
@@ -1520,7 +1629,7 @@ class Yaw {
         this.ev.add('i', 'endstop', sideName(md));
       } else if (this.twistBlocked(md)) {
         this.stopNow(true);
-        if (this.angleValid()) this.ev.add('w', 'twist_limit', `${sideName(md)} at ${rha(this.cont)} deg`);
+        if (this.angleValid() && this.maxDeg > 0) this.ev.add('w', 'twist_limit', `${sideName(md)} at ${rha(this.cont)} deg`);
         else this.ev.add('w', 'twist_limit', `${sideName(md)}, balance ${this.bal.balance()}`);
       }
     }
@@ -1558,7 +1667,7 @@ class Yaw {
     t.gotoTarget = this.gotoActive ? rha(this.gotoTarget) % 360 : 0;
     t.sensor = this.sensorName();
     if (this.as5600) t.sensorOk = this.asOk;
-    else if (this.endstops) t.sensorOk = !(this.endL.stable && this.endR.stable);
+    else if (this.endstops) t.sensorOk = !(this.endL.stable && this.endR.stable) && this.side.refused === 0;
     else t.sensorOk = true;
     t.calActive = this.calActive;
   }
@@ -1824,6 +1933,8 @@ class Device {
 
   applySettings(prev, next) {
     this.rotor.configure(next.rotorRamp);
+    // rotorMax caps the running speed too (main.cpp appApplySettings).
+    if (this.rotor.target() > next.rotorMax) this.rotor.setSpeed(next.rotorMax);
     this.yaw.configure(prev, next);
     this.battery.configure(next);
     this.fs.configure(next);
@@ -1929,8 +2040,14 @@ class Device {
     }
   }
 
+  // A WS client whose frames are still queued after it left must not start
+  // anything (commands.cpp clientGone). The mock runs frames synchronously,
+  // so this only mirrors the rule.
+  gone(who) { return who.src === 'ws' && !net.clients.has(who.id); }
+
   doRotor(who, c, sink, now) {
     if (c.speed > 0) {
+      if (this.gone(who)) return undefined;
       const e = this.fs.allowMotion();
       if (e) return this.sendErr(sink, c, e);
       this.fs.clearRuntime();
@@ -1952,13 +2069,15 @@ class Device {
           this.yaw.stop(true);
           break;
         }
+        if (this.gone(who)) return undefined;
         e = this.fs.allowMotion() ?? this.yaw.move(c.dir, c.yawSpeed, now);
         if (!e) this.fs.onMotionCommand(who, now);
         break;
       case 'hold':
         this.yaw.hold(c.dir, now);
-        break;
+        return undefined;  // no ack: holds repeat every 200 ms
       case 'goto':
+        if (this.gone(who)) return undefined;
         e = this.fs.allowMotion() ?? this.yaw.gotoAngle(c.gotoDeg, now);
         if (!e) this.fs.onMotionCommand(who, now);
         break;
@@ -2022,11 +2141,16 @@ class Device {
     this.broadcastCfg();
   }
 
+  // Stops every time; one log entry per press although the panel sends the
+  // same STOP over WS and HTTP (failsafe.cpp emergencyStop).
   emergencyStop(why) {
     this.rotor.stop();
     this.yaw.stop(true);
     this.fs.releaseOwner();
     this.motorsIdle = this.allIdle();
+    const now = this.millis();
+    if (this.estopLogAt !== undefined && now - this.estopLogAt < ESTOP_LOG_GAP_MS) return;
+    this.estopLogAt = now;
     this.events.add('i', 'estop', why || 'stop');
   }
 
@@ -2138,10 +2262,11 @@ class Device {
     }
   }
 
-  // Basic Auth password for /update: the AP password (default if unusable).
+  // Basic Auth password for /update: the password the AP started with
+  // (a new apPass works after a restart, like the network itself).
   otaPassword() {
-    const p = this.settings.apPass;
-    return p && p.length >= 8 ? p : AP_PASSWORD;
+    const p = this.bootSettings.apPass;
+    return p && p.length >= 8 && p.length <= 63 ? p : AP_PASSWORD;
   }
 }
 
@@ -2468,6 +2593,45 @@ function sendJson(res, code, body, lag = true) {
   else go();
 }
 
+// lib/turbine_core/src/stop_seq_guard.cpp: an HTTP motion frame whose "seq"
+// is older than the client's last stop of the same axis is refused (every
+// POST is its own TCP connection and can overtake an earlier one).
+const seqGuard = {
+  slots: [],  // { client, touch, rotor: { seq, at } | null, yaw: ... }
+  kinds(c) {
+    if (c.type === 'stop') return { rotor: 'stop', yaw: 'stop' };
+    if (c.type === 'rotor') return { rotor: c.speed > 0 ? 'motion' : 'stop', yaw: null };
+    if (c.type === 'yaw' && c.action === 'move') return { rotor: null, yaw: c.dir === 0 ? 'stop' : 'motion' };
+    if (c.type === 'yaw' && c.action === 'goto') return { rotor: null, yaw: 'motion' };
+    return { rotor: null, yaw: null };
+  },
+  older: (a, b) => ((a - b) | 0) < 0,
+  accept(client, c, now) {
+    if (!c.hasSeq) return true;
+    const k = this.kinds(c);
+    if (!k.rotor && !k.yaw) return true;
+    let sl = this.slots.find((x) => x.client === client);
+    if (k.rotor === 'stop' || k.yaw === 'stop') {
+      if (!sl) {
+        if (this.slots.length >= SEQ_SLOTS) this.slots.splice(this.slots.indexOf(this.slots.reduce((a, b) => (b.touch < a.touch ? b : a))), 1);
+        sl = { client, touch: now, rotor: null, yaw: null };
+        this.slots.push(sl);
+      }
+      sl.touch = now;
+      for (const ax of ['rotor', 'yaw']) {
+        if (k[ax] !== 'stop') continue;
+        const a = sl[ax];
+        const keep = a && now - a.at < SEQ_WINDOW_MS && !this.older(a.seq, c.seq);
+        sl[ax] = { seq: keep ? a.seq : c.seq, at: now };
+      }
+      return true;
+    }
+    const a = sl && sl[k.rotor === 'motion' ? 'rotor' : 'yaw'];
+    if (!a || now - a.at >= SEQ_WINDOW_MS) return true;
+    return !this.older(c.seq, a.seq);
+  },
+};
+
 async function handleApiCmd(req, res) {
   const ip = remoteIp(req);
   const { buf, total } = await readBody(req, MAX_CMD_LEN + 1);
@@ -2488,6 +2652,10 @@ async function handleApiCmd(req, res) {
   const pr = parseCommand(body, null);
   const c = pr.cmd;
   if (pr.err) return sendJson(res, 200, buildErr(c.type, pr.err, pr.field, null, c.hasId, c.id));
+  if (!seqGuard.accept(ip, c, d.millis())) {
+    if (knobs.verbose) process.stdout.write(`${stamp(d.millis())} W http: stale ${c.type} (seq ${c.seq}) dropped\n`);
+    return sendJson(res, 200, buildErr(c.type, 'stale', null, null, c.hasId, c.id));
+  }
   let reply;
   if (c.type === 'ping') reply = buildPong(c.hasId, c.id, d.millis());
   else if (c.type === 'cfg' && c.cfgGet && !c.cfgReset) reply = d.buildCfgFrame();
@@ -2542,6 +2710,7 @@ function handleUpdatePost(req, res, url) {
     if (d.ota.phase !== 'idle') return refuse(409, 'busy');
     if (!d.motorsIdle) return refuse(409, 'motors running');
     if (isFs && firstByte === OTA_IMAGE_MAGIC) return refuse(400, 'firmware image sent as fs');
+    if (!isFs && firstByte >= 0 && firstByte !== OTA_IMAGE_MAGIC) return refuse(400, 'not a firmware image');
     d.otaActive = true;
     d.ota = { phase: 'running', isFs, written: 0, lastDataAt: Date.now() };
     ctx.accepted = true;
@@ -2663,7 +2832,7 @@ function notFound(res) {
 // --- test hooks ---------------------------------------------------------------
 
 const KNOB_TYPES = {
-  bat: 'number', instant: 'boolean', pos: 'number', magnet: 'boolean', sensorReversed: 'boolean',
+  bat: 'number', instant: 'boolean', pos: 'number', magnet: 'boolean', sensorReversed: 'boolean', motorReversed: 'boolean',
   endL: 'boolean|null', endR: 'boolean|null', lag: 'number', noWs: 'boolean', drain: 'boolean',
   sag: 'boolean', verbose: 'boolean',
 };
@@ -2723,7 +2892,7 @@ async function handleMock(req, res, url) {
     if ('bat' in o) phys.ocvMv = clamp(o.bat, 0, 20) * 1000;
     if ('pos' in o) phys.truePos = o.pos;
     if ('lag' in o) knobs.lag = clamp(Math.round(o.lag), 0, 10000);
-    for (const k of ['magnet', 'sensorReversed', 'endL', 'endR', 'noWs', 'drain', 'sag', 'verbose']) {
+    for (const k of ['magnet', 'sensorReversed', 'motorReversed', 'endL', 'endR', 'noWs', 'drain', 'sag', 'verbose']) {
       if (k in o) knobs[k] = o[k];
     }
     if (o.instant && dev) dev.battery.restart();
