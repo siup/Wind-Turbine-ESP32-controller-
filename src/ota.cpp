@@ -115,6 +115,18 @@ void sendResult(AsyncWebServerRequest* req, int code, bool ok, const char* err) 
   req->send(r);
 }
 
+// Wrong or missing credentials. The panel and the fallback page send their
+// own Authorization header from XHR; answering those with a Basic challenge
+// would make the browser pop up its own login dialog on top of the panel's
+// message, so the challenge only goes to requests without credentials.
+void sendUnauthorized(AsyncWebServerRequest* req) {
+  if (req->hasHeader("Authorization")) {
+    sendResult(req, 401, false, "bad password");
+  } else {
+    req->requestAuthentication(AsyncAuthType::AUTH_BASIC, kRealm);
+  }
+}
+
 void refuse(UploadCtx* ctx, uint16_t status, const char* err) {
   ctx->status = status;
   copyText(ctx->err, sizeof(ctx->err), err);
@@ -242,7 +254,7 @@ void onRequestDone(AsyncWebServerRequest* req) {
   if (!ctx) {
     // No file part arrived (or out of memory before the first chunk).
     if (!authOk(req)) {
-      req->requestAuthentication(AsyncAuthType::AUTH_BASIC, kRealm);
+      sendUnauthorized(req);
     } else {
       sendResult(req, 400, false, "no file in request");
     }
@@ -250,7 +262,7 @@ void onRequestDone(AsyncWebServerRequest* req) {
   }
 
   if (ctx->status == 401) {
-    req->requestAuthentication(AsyncAuthType::AUTH_BASIC, kRealm);
+    sendUnauthorized(req);
     return;
   }
 

@@ -2581,10 +2581,10 @@ function handleUpdatePost(req, res, url) {
       }
     }
     if (!ctx.started) {
-      if (!auth) return send401(res);
+      if (!auth) return send401(req, res);
       return sendJson(res, 400, J({ ok: false, error: 'no file in request' }));
     }
-    if (ctx.status === 401) return send401(res);
+    if (ctx.status === 401) return send401(req, res);
     if (ctx.accepted && d.ota.phase === 'running') {
       const end = ctx.tail.lastIndexOf(`\r\n--${boundary}`);
       if (end < 0) {
@@ -2606,7 +2606,10 @@ function handleUpdatePost(req, res, url) {
   });
 }
 
-function send401(res) {
+// Like ota.cpp: a request that already carried credentials (the panel's XHR)
+// gets a plain JSON 401, so the browser does not open its own login dialog.
+function send401(req, res) {
+  if (req.headers.authorization) return sendJson(res, 401, J({ ok: false, error: 'bad password' }));
   sendRaw(res, 401, 'text/plain', '', { 'WWW-Authenticate': `Basic realm="${OTA_REALM}"` });
 }
 

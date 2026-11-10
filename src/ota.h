@@ -3,7 +3,10 @@
 //   - refused with 409 unless shared::motorsIdle
 //   - sets shared::otaActive before the first byte is written: motors stop,
 //     commands get err busy_ota, fs.reason = "ota"
-//   - type=fs: LittleFS.end() first, Update.begin(size, U_SPIFFS)
+//   - type=fs: LittleFS.end() first, Update.begin(size, U_FLASHFS) (the
+//     "spiffs" subtype partition of min_spiffs.csv holds LittleFS)
+//   - wrong password: 401; the Basic challenge only goes to requests that
+//     carried no credentials (XHR from the panel gets JSON, no browser popup)
 //   - responds 200 {"ok":true} or 500 {"ok":false,"error":"..."}
 //   - the device restarts ~1 s after the upload ends, success or not
 //     (spec: OTA lock is released by a restart)

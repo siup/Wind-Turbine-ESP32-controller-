@@ -230,7 +230,7 @@ Klient blokuje przyciski ruchu tylko przy braku połączenia, `bat.crit` i `ota`
 
 - `GET /api/state`: ostatnia ramka `state`.
 - `POST /api/cmd`: treść to jedna ramka. Odpowiedź od razu: `err` przy błędzie parsowania, `pong` na `ping`, `cfg` / `info` / `log` z pamięci podręcznej, w pozostałych przypadkach `ack`. Błędy wykonania (np. `low_battery`) klient HTTP widzi w telemetrii, nie w odpowiedzi.
-- `POST /update?type=fw|fs`: aktualizacja OTA (multipart, Basic Auth `admin` + hasło AP). 409 gdy silniki pracują.
+- `POST /update?type=fw|fs`: aktualizacja OTA (multipart, Basic Auth `admin` + hasło AP). 409 gdy silniki pracują. Złe hasło: 401 z `{"ok":false,"error":"bad password"}`; nagłówek `WWW-Authenticate` idzie tylko do żądań bez danych logowania, więc przeglądarka nie otwiera własnego okna logowania nad panelem.
 - Klient HTTP jest identyfikowany po adresie IP (właściciel ruchu, timeout).
 
 ## BLE

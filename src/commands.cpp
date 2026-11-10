@@ -50,8 +50,7 @@ char g_mac[18] = "";
 
 const char* const kBuild = __DATE__ " " __TIME__;
 
-// "ws#3", "ble#1", "http@192.168.4.2", "serial". Source::Serial is not
-// spelled out: the core's `#define Serial ...` would rename the enumerator.
+// "ws#3", "ble#1", "http@192.168.4.2", "serial" (Source::Console).
 void formatClient(const InMsg& m, char* out, size_t cap) {
   if (m.src == proto::Source::Http) {
     snprintf(out, cap, "http@%u.%u.%u.%u", (unsigned)(m.client & 0xff), (unsigned)((m.client >> 8) & 0xff),

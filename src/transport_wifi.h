@@ -45,7 +45,8 @@ bool rssi(int8_t& out);  // weakest associated station, false if none
 void setTxPower(uint8_t qdbm);  // snapped, applied live
 
 enum class Cache : uint8_t { State, Cfg, Info, Log };
-// Loop task: store a copy for HTTP handlers (mutex-protected double buffer).
+// Loop task: store a copy for HTTP handlers (one buffer per cache behind a
+// mutex; a publish that cannot get the mutex within 5 ms is skipped).
 void publish(Cache which, const char* data, size_t len);
 
 }  // namespace TransportWifi
