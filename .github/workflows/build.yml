@@ -1,0 +1,55 @@
+# Firmware for every board, the LittleFS image with the panel, unit tests.
+name: build
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            .pio/libdeps
+          key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
+          restore-keys: pio-${{ runner.os }}-
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Build firmware (ESP32, ESP32-S3, bench)
+        run: pio run -e esp32dev -e esp32-s3-devkitc-1 -e esp32dev_bench
+
+      - name: Build LittleFS image (web panel)
+        run: pio run -e esp32dev -t buildfs
+
+      - name: Unit tests (native)
+        run: pio test -e native
+
+      # Ready-made files for the OTA page of the panel.
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          if-no-files-found: error
+          path: |
+            .pio/build/esp32dev/firmware.bin
+            .pio/build/esp32dev/littlefs.bin
+            .pio/build/esp32-s3-devkitc-1/firmware.bin
