@@ -446,6 +446,28 @@ void notify(const char* data, size_t len) {
   for (uint8_t i = 0; i < n; i++) notifyPeer(handles[i], data, len, true);
 }
 
+void sendTo(uint16_t handle, const char* data, size_t len) {
+  if (!g_started || !data || len == 0) return;
+  notifyPeer(handle, data, len, true);
+}
+
+size_t maxFrameLen(uint16_t handle) {
+  size_t n = 0;
+  portENTER_CRITICAL(&g_mux);
+  const int i = findPeerLocked(handle);
+  if (i >= 0 && g_peers[i].mtu > 3) n = g_peers[i].mtu - 3;
+  portEXIT_CRITICAL(&g_mux);
+  return n;
+}
+
+bool hasPeer(uint16_t handle) {
+  if (handle == kNoConn) return false;
+  portENTER_CRITICAL(&g_mux);
+  const bool found = findPeerLocked(handle) >= 0;
+  portEXIT_CRITICAL(&g_mux);
+  return found;
+}
+
 uint8_t clientCount() { return g_peerCount.load(); }
 
 bool rssi(int8_t& out) {
@@ -468,6 +490,19 @@ void tick(uint32_t nowMs, uint8_t wifiStations) {
 void notify(const char* data, size_t len) {
   (void)data;
   (void)len;
+}
+void sendTo(uint16_t handle, const char* data, size_t len) {
+  (void)handle;
+  (void)data;
+  (void)len;
+}
+size_t maxFrameLen(uint16_t handle) {
+  (void)handle;
+  return 0;
+}
+bool hasPeer(uint16_t handle) {
+  (void)handle;
+  return false;
 }
 uint8_t clientCount() { return 0; }
 bool rssi(int8_t& out) {

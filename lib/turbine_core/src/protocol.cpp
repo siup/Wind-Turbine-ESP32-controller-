@@ -31,6 +31,7 @@ const char* errCode(Err e) {
     case Err::TwistLimit: return "twist_limit";
     case Err::Endstop: return "endstop";
     case Err::Busy: return "busy";
+    case Err::Stale: return "stale";
     case Err::None: break;
   }
   return "";
@@ -50,6 +51,7 @@ const char* errMessage(Err e) {
     case Err::TwistLimit: return "cable twist limit reached";
     case Err::Endstop: return "endstop reached";
     case Err::Busy: return "motors running or queue full";
+    case Err::Stale: return "sent before the last stop, ignored";
     case Err::None: break;
   }
   return "";

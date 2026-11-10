@@ -77,6 +77,7 @@ struct State {
 
   // Endstops
   EndstopDebouncer endL, endR;
+  EndstopSideCheck side;  // switch on the wrong side (motor turns the other way)
 
   // AS5600
   bool asOk = false;        // last read fine and magnet detected
@@ -135,21 +136,31 @@ int8_t motionDir() {
 
 bool angleValid() { return kAs5600 && s.asOk && s.contValid; }
 
+// L guards logical left, R logical right. A direction that drove into the
+// switch on the wrong side stays refused as well (EndstopSideCheck).
 bool endstopBlocked(int8_t d) {
   if (!kEndstops || d == 0) return false;
+  if (s.side.blocked(d)) return true;
   return d < 0 ? s.endL.active() : s.endR.active();
 }
 
-// Twist limit: AS5600 angle when it is valid, else the time balance (also
-// the fallback when the AS5600 fails).
+// Twist limit: the AS5600 angle against yawMaxDeg when the angle is valid
+// and that limit is set; otherwise the time balance against yawMaxBal (no
+// sensor, AS5600 failed, or yawMaxDeg 0 with yawMaxBal set).
 bool twistBlocked(int8_t d) {
   if (d == 0) return false;
-  if (angleValid()) {
-    if (s.maxDeg == 0) return false;
+  if (angleValid() && s.maxDeg > 0) {
     const float lim = (float)s.maxDeg;
     return d > 0 ? s.cont >= lim : s.cont <= -lim;
   }
   return s.bal.blocked(d, s.maxBal);
+}
+
+// Travel (balance units) in which a switch left behind has to open.
+uint32_t endReleaseTravel() {
+  if (s.ms360 == 0) return ENDSTOP_RELEASE_MS;
+  const uint32_t t = (uint32_t)(((uint64_t)s.ms360 * ENDSTOP_RELEASE_DEG + 180) / 360);
+  return t > ENDSTOP_RELEASE_MIN_MS ? t : ENDSTOP_RELEASE_MIN_MS;
 }
 
 bool openPrefs() {
@@ -170,13 +181,18 @@ void persist(uint32_t nowMs, bool force) {
   const bool balDirty = b != s.savedBal;
   bool offDirty = false;
   bool contDirty = false;
+  bool urgent = false;
   if (kAs5600) {
     offDirty = s.asOff != s.savedOff;
-    const float th = force ? 0.5f : kContSaveDeg;
-    contDirty = s.contValid && fabsf(s.cont - s.savedCont) >= th;
+    const float drift = s.contValid ? fabsf(s.cont - s.savedCont) : 0.0f;
+    contDirty = s.contValid && drift >= (force ? 0.5f : kContSaveDeg);
+    // After a reset the unwrapper picks the turn nearest to the saved
+    // value, so it must never lag the truth by 180 deg: a fast yaw skips
+    // the rate limit before that.
+    urgent = drift >= YAW_CONT_FORCE_SAVE_DEG;
   }
   if (!balDirty && !offDirty && !contDirty) return;
-  if (!force && (int32_t)(nowMs - s.lastSaveMs) < (int32_t)YAW_BAL_SAVE_MS) return;
+  if (!force && !urgent && (int32_t)(nowMs - s.lastSaveMs) < (int32_t)YAW_BAL_SAVE_MS) return;
   s.lastSaveMs = nowMs;
   if (!openPrefs()) return;
   bool ok = true;
@@ -480,6 +496,7 @@ void YawController::configure(const Settings& prev, const Settings& next) {
   s.sensRev = next.yawSensRev;
   if (invertChanged || revChanged) {
     if (!idle()) stopNow(true);
+    if (invertChanged) s.side.reset();  // the motor turns the other way now
     zeroPosition();
     persist(millis(), true);
     EventLog::add('w', "yaw_zeroed", "%s changed", invertChanged ? "yawInvert" : "yawSensRev");
@@ -505,6 +522,11 @@ proto::Err YawController::move(proto::YawDir dir, uint8_t speedPct, uint32_t now
     return e;
   }
   s.gotoActive = false;
+  if (kEndstops && !(s.holdArmed && s.dir == d)) {
+    // A new move (not a repeat of the running one): a switch closed now has
+    // to open as the yaw drives away from it.
+    s.side.moveStarted(d, s.endL.active(), s.endR.active(), s.bal.balance());
+  }
   setDrive(d, clampSpeed(speedPct ? speedPct : s.speedDefault));
   s.holdArmed = true;
   s.lastHoldMs = nowMs;
@@ -592,8 +614,25 @@ void YawController::tick(uint32_t nowMs) {
   if (kEndstops) {
     s.endL.update(digitalRead(PIN_ENDSTOP_L) == LOW, nowMs, ENDSTOP_DEBOUNCE_MS);
     s.endR.update(digitalRead(PIN_ENDSTOP_R) == LOW, nowMs, ENDSTOP_DEBOUNCE_MS);
-    if (s.endL.rose()) s.bal.onEndstop(-1);
-    if (s.endR.rose()) s.bal.onEndstop(+1);
+    EndstopSideInputs in;
+    in.nowMs = nowMs;
+    in.drive = signOf(yawMotor.actualMilli());
+    in.commanded = s.dir;
+    in.lActive = s.endL.active();
+    in.rActive = s.endR.active();
+    in.lRose = s.endL.rose();
+    in.rRose = s.endR.rose();
+    in.balance = s.bal.balance();
+    in.releaseTravel = endReleaseTravel();
+    const EndstopSideResult r = s.side.update(in);
+    // Only a plausible hit corrects the balance (no bogus reference).
+    if (r.refL) s.bal.onEndstop(-1);
+    if (r.refR) s.bal.onEndstop(+1);
+    if (r.wrong != 0) {
+      stopNow(true);
+      EventLog::add('e', "yaw_end_dir", "switch %c while going %s, both ways blocked",
+                    r.wrong < 0 ? 'R' : 'L', sideName(r.wrong));
+    }
   }
 
   if (kAs5600 && (int32_t)(nowMs - s.asNextMs) >= 0) {
@@ -624,7 +663,7 @@ void YawController::tick(uint32_t nowMs) {
       EventLog::add('i', "endstop", "%s", sideName(md));
     } else if (twistBlocked(md)) {
       stopNow(true);
-      if (angleValid()) {
+      if (angleValid() && s.maxDeg > 0) {  // which limit tripped (see twistBlocked)
         EventLog::add('w', "twist_limit", "%s at %ld deg", sideName(md), (long)lroundf(s.cont));
       } else {
         EventLog::add('w', "twist_limit", "%s, balance %ld", sideName(md), (long)s.bal.balance());
@@ -673,7 +712,8 @@ void YawController::fill(TelemetrySnapshot& t) const {
   if (kAs5600) {
     t.sensorOk = s.asOk;
   } else if (kEndstops) {
-    t.sensorOk = !(s.endL.active() && s.endR.active());  // both closed = wiring fault
+    // both closed = wiring fault; a switch on the wrong side = yawInvert or wiring
+    t.sensorOk = !(s.endL.active() && s.endR.active()) && s.side.refused() == 0;
   } else {
     t.sensorOk = true;
   }

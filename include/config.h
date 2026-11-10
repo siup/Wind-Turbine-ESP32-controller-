@@ -142,8 +142,15 @@
 #define YAW_MAX_BALANCE_MS 0      // twist limit (speed-weighted ms), 0 = off
 #define YAW_HOLD_TIMEOUT_MS 700   // deadman: stop if no `hold` for this long
 #define YAW_BAL_SAVE_MS 1000      // persist balance at most this often while moving
+#define YAW_CONT_FORCE_SAVE_DEG 90.0f  // AS5600 turn count saved at once past this drift
 #define YAW_CAL_MIN_MS 500        // shortest accepted ms-per-360 calibration
 #define ENDSTOP_DEBOUNCE_MS 20
+// Endstop on the wrong side: a switch closed when a move away from it
+// started must open within this travel (degrees with yawMs360 known, else
+// speed-weighted ms at 100 %), or the motor turns the other way.
+#define ENDSTOP_RELEASE_DEG 15
+#define ENDSTOP_RELEASE_MIN_MS 300
+#define ENDSTOP_RELEASE_MS 1500
 #define AS5600_I2C_ADDR 0x36
 #define AS5600_PERIOD_MS 50
 #define AS5600_I2C_TIMEOUT_MS 10

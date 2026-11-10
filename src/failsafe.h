@@ -33,6 +33,8 @@ void clearRuntime();
 
 // {"t":"stop"}, Serial "s", estop flag: rotor coast now, yaw brake now, goto
 // cancelled, owner released. Does NOT latch fs.active (the next command works).
+// Stops every time; an "estop" event within 1 s of the previous one is not
+// logged again (the panel sends the same STOP over several links).
 void emergencyStop(const char* why);
 
 bool active();

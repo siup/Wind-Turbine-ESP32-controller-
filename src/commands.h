@@ -16,6 +16,9 @@ class ReplySink {
   // (the HTTP handler already answered).
   virtual bool wantsAck(bool hasId) const { (void)hasId; return true; }
   virtual bool wantsReplies() const { return true; }  // false: execute silently
+  // Longest reply the transport can deliver in one frame, 0 = no limit
+  // (BLE: MTU - 3). The log reply keeps only the newest items that fit.
+  virtual size_t maxLen() const { return 0; }
 };
 
 namespace Commands {
@@ -25,11 +28,14 @@ void begin();
 // Parse + execute one Command message (see docs/PROTOCOL.md for semantics):
 //  - every valid frame -> Failsafe::onFrame(client)
 //  - OTA active -> everything except stop / ping / info / log -> err busy_ota
+//  - motion (rotor speed > 0, yaw dir left/right, goto) from a WS / BLE client
+//    that has already disconnected is ignored (no owner, no reply)
 //  - rotor speed > 0: Failsafe::allowMotion(), clearRuntime(), clamp to rotorMax,
 //    rotorMotor.setSpeed(), Failsafe::onMotionCommand()
 //  - rotor speed 0: ramp to 0, or brake() if "brake":true
 //  - yaw dir left/right: allowMotion(), yaw.move(), onMotionCommand(); dir stop: yaw.stop(true)
-//  - yaw hold: yaw.hold(); goto: allowMotion(), yaw.gotoAngle(), onMotionCommand()
+//  - yaw hold: yaw.hold(), no ack (it repeats every 200 ms);
+//    goto: allowMotion(), yaw.gotoAngle(), onMotionCommand()
 //  - yaw zero / cal: yaw.zero() / yaw.calibrate(); cal stop commits yawMs360
 //  - stop: Failsafe::emergencyStop()
 //  - cfg get -> cfg frame; cfg set -> re-parse against current settings,

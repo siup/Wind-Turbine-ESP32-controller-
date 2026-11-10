@@ -20,11 +20,17 @@ class YawController {
   // Speed default, duty, invert, twist limits, ms-per-360. A change of
   // yawInvert (or yawSensRev in AS5600 mode) zeroes the position state and
   // logs a warning, because the stored balance would point the wrong way.
+  // A yawInvert change also clears a "switch on the wrong side" lock.
   void configure(const Settings& prev, const Settings& next);
 
   // Start a hold-to-run move (dir Stop = stop with brake). speedPct 0 = the
   // yawSpeed setting. Cancels goto. Checks endstop and twist limit first
   // (Err::Endstop / Err::TwistLimit). Arms the deadman.
+  // Endstop mode: switch L guards logical left, R logical right. A switch
+  // that closes while the yaw drives away from it (or stays closed while it
+  // drives away) means the motor turns the other way: the yaw stops, logs
+  // yaw_end_dir and refuses that direction until yawInvert changes or both
+  // switches are open.
   proto::Err move(proto::YawDir dir, uint8_t speedPct, uint32_t nowMs);
 
   // Deadman refresh: only extends a move already running in `dir`. Ignored

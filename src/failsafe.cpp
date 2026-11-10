@@ -27,6 +27,12 @@ bool g_checkNow = true;      // run the next tick() without waiting FS_CHECK_MS
 uint8_t g_lastMask = 0;      // mask already logged
 uint32_t g_ownerSeenMs = 0;  // last frame from the motion owner (for the log text)
 uint16_t g_lastClients = 0;
+bool g_estopLogged = false;  // an "estop" event was logged at g_estopLogMs
+uint32_t g_estopLogMs = 0;
+
+// The panel sends one STOP over WS and HTTP (and BLE) for redundancy: one
+// press, one log entry.
+constexpr uint32_t kEstopLogGapMs = 1000;
 
 constexpr uint8_t bitOf(proto::FsReason r) { return (uint8_t)(1u << (uint8_t)r); }
 
@@ -213,10 +219,15 @@ void clearRuntime() {
 }
 
 void emergencyStop(const char* why) {
+  // Always stop; only the log entry is deduplicated.
   rotorMotor.stop();
   yaw.stop(true);
   g_logic.releaseOwner();
   shared::motorsIdle.store(allIdle());
+  const uint32_t now = millis();
+  if (g_estopLogged && (uint32_t)(now - g_estopLogMs) < kEstopLogGapMs) return;
+  g_estopLogged = true;
+  g_estopLogMs = now;
   EventLog::add('i', "estop", "%s", (why && why[0]) ? why : "stop");
 }
 

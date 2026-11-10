@@ -175,6 +175,12 @@ void start(AsyncWebServerRequest* req, UploadCtx* ctx, const uint8_t* data, size
     refuse(ctx, 400, "firmware image sent as fs");
     return;
   }
+  // littlefs.bin picked with type=fw: Update would take it for an encrypted
+  // image, fail with "Decryption error" and the device would restart.
+  if (!fs && len > 0 && data[0] != kImageMagic) {
+    refuse(ctx, 400, "not a firmware image");
+    return;
+  }
 
   // Accepted. From here on the upload always ends in a restart.
   shared::otaActive.store(true);

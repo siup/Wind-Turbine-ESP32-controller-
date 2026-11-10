@@ -37,6 +37,7 @@
 #include "log.h"
 #include "ota.h"
 #include "protocol.h"
+#include "stop_seq_guard.h"
 
 namespace {
 
@@ -94,7 +95,7 @@ button{min-height:56px;font-weight:700;letter-spacing:.12em;text-transform:upper
 <section><h2>Awaria</h2><button id="stop" type="button">Stop wszystko</button></section>
 </main><script>
 var $=function(i){return document.getElementById(i)},msg=function(t){$('msg').textContent=t};
-var errs={'motors running':'silniki pracują, zatrzymaj je','busy':'trwa inna aktualizacja','firmware image sent as fs':'to jest plik firmware, wybierz typ Firmware'};
+var errs={'motors running':'silniki pracują, zatrzymaj je','busy':'trwa inna aktualizacja','firmware image sent as fs':'to jest plik firmware, wybierz typ Firmware','not a firmware image':'to nie jest plik firmware, wybierz typ Panel','empty file':'pusty plik','no file in request':'brak pliku','incomplete upload':'wysyłanie przerwane'};
 $('f').onsubmit=function(e){e.preventDefault();var file=$('file').files[0];
 if(!file){msg('Wybierz plik.');return}
 var fd=new FormData();fd.append('file',file,file.name);
@@ -104,7 +105,7 @@ x.upload.onprogress=function(ev){if(ev.lengthComputable){var p=Math.round(ev.loa
 x.onload=function(){var r={};try{r=JSON.parse(x.responseText)}catch(_){}
 if(x.status==200){$('bar').style.width='100%';msg('Gotowe. Restart urządzenia, strona odświeży się za 10 s.');setTimeout(function(){location.reload()},10000);return}
 $('go').disabled=false;
-if(x.status==401)msg('Złe hasło.');else msg('Błąd '+x.status+': '+(errs[r.error]||r.error||'nieznany'))};
+if(x.status==401)msg('Złe hasło.');else msg('Błąd '+x.status+': '+(errs[r.error]||'zapis obrazu nie powiódł się'))};
 x.onerror=function(){$('go').disabled=false;msg('Błąd połączenia.')};
 $('go').disabled=true;msg('Wysyłanie...');x.send(fd)};
 $('stop').onclick=function(){fetch('/api/cmd',{method:'POST',body:'{"t":"stop"}'}).then(function(){msg('Wysłano STOP.')},function(){msg('Brak połączenia.')})};
@@ -169,6 +170,19 @@ bool slotRemove(uint32_t id) {
   return found;
 }
 
+bool slotFind(uint32_t id) {
+  bool found = false;
+  portENTER_CRITICAL(&s_wsMux);
+  for (const WsSlot& s : s_slots) {
+    if (s.used && s.id == id) {
+      found = true;
+      break;
+    }
+  }
+  portEXIT_CRITICAL(&s_wsMux);
+  return found;
+}
+
 void slotTouch(uint32_t id, uint32_t now) {
   portENTER_CRITICAL(&s_wsMux);
   for (WsSlot& s : s_slots) {
@@ -191,7 +205,7 @@ uint32_t s_lastSilentMs = 0;
 
 // --- Caches for HTTP (loop writes, async_tcp reads) -------------------------
 constexpr size_t kCacheSmall = 1024;
-constexpr size_t kCacheLog = 2048;
+constexpr size_t kCacheLog = 2304;  // a full 20-item log is about 2.2 kB
 char s_cacheState[kCacheSmall];
 char s_cacheCfg[kCacheSmall];
 char s_cacheInfo[kCacheSmall];
@@ -251,6 +265,9 @@ void sendCache(AsyncWebServerRequest* req, Cache which, const Command& cmd) {
   }
   sendJson(req, 200, buf);
 }
+
+// Send order of HTTP commands (async_tcp only, see stop_seq_guard.h).
+StopSeqGuard s_seqGuard;
 
 uint32_t remoteIpv4(AsyncWebServerRequest* req) {
   AsyncClient* c = req->client();
@@ -325,8 +342,17 @@ void handleCmd(AsyncWebServerRequest* req) {
     return;
   }
 
+  // Every request is its own TCP connection: a START delayed on the air
+  // must not run after the STOP the user pressed later.
+  const uint32_t ip = remoteIpv4(req);
+  if (!s_seqGuard.accept(ip, cmd, millis())) {
+    LOGW("http: stale %s (seq %lu) dropped", proto::cmdName(cmd.type), (unsigned long)cmd.seq);
+    sendErr(req, cmd.type, proto::Err::Stale, nullptr, nullptr, cmd.hasId, cmd.id);
+    return;
+  }
+
   char out[160];
-  if (!CmdQueue::pushCommand(proto::Source::Http, remoteIpv4(req), body, len)) {
+  if (!CmdQueue::pushCommand(proto::Source::Http, ip, body, len)) {
     if (cmd.type == proto::Cmd::Stop) {
       // The estop flag is raised even with a full queue: the stop happens.
       buildAck(cmd.type, cmd.hasId, cmd.id, out, sizeof(out));
@@ -416,15 +442,47 @@ void wsOnDisconnect(uint32_t id) {
   LOGI("ws #%lu disconnected", (unsigned long)id);
 }
 
-// One unfragmented text frame that arrived in pieces (it straddled TCP
-// segments). WS data events only run in the async_tcp task, one at a time.
+// Unfragmented text frames that arrive in pieces (they straddled TCP
+// segments), one partial frame per client. WS data events only run in the
+// async_tcp task, one at a time, so this needs no lock. WS ids are never
+// reused: an entry left behind by a client that went away is simply taken
+// over later (it is not freed on disconnect, which may run in the loop).
 struct WsRx {
-  uint32_t id;
+  uint32_t id;  // 0 = free
+  uint32_t startMs;
   uint16_t have;
   uint16_t total;
   char buf[proto::kMaxCmdLen + 1];
 };
-WsRx s_rx = {};
+constexpr uint8_t kRxSlots = 4;
+WsRx s_rx[kRxSlots] = {};
+
+WsRx* rxFind(uint32_t id) {
+  for (WsRx& r : s_rx) {
+    if (r.id == id) return &r;
+  }
+  return nullptr;
+}
+
+// Entry for a new partial frame of client id: its own, a free one, or the
+// one whose frame started longest ago.
+WsRx* rxTake(uint32_t id, uint32_t now) {
+  WsRx* r = rxFind(id);
+  if (!r) {
+    r = &s_rx[0];
+    for (WsRx& c : s_rx) {
+      if (c.id == 0) {
+        r = &c;
+        break;
+      }
+      if ((int32_t)(c.startMs - r->startMs) < 0) r = &c;
+    }
+  }
+  r->id = id;
+  r->startMs = now;
+  r->have = 0;
+  return r;
+}
 
 void wsOnData(AsyncWebSocketClient* client, const AwsFrameInfo* info, const uint8_t* data, size_t len) {
   const uint32_t id = client->id();
@@ -449,26 +507,30 @@ void wsOnData(AsyncWebSocketClient* client, const AwsFrameInfo* info, const uint
   }
 
   if (info->index != 0 || len != info->len) {
-    // A piece of a frame: collect it, act once the frame is complete.
+    // A piece of a frame: collect it per client, act once it is complete.
+    WsRx* rx;
     if (info->index == 0) {
-      s_rx.id = id;
-      s_rx.have = 0;
-      s_rx.total = static_cast<uint16_t>(info->len);
-    } else if (s_rx.id != id || s_rx.have != info->index) {
-      s_rx.id = 0;  // pieces of two frames interleaved: drop
+      rx = rxTake(id, millis());
+      rx->total = static_cast<uint16_t>(info->len);
+    } else {
+      rx = rxFind(id);
+      if (!rx) return;  // its start was lost (slot taken over)
+      if (rx->have != info->index) {
+        rx->id = 0;  // a gap: drop the frame
+        return;
+      }
+    }
+    if ((size_t)rx->have + len > rx->total) {
+      rx->id = 0;
       return;
     }
-    if ((size_t)s_rx.have + len > s_rx.total) {
-      s_rx.id = 0;
-      return;
-    }
-    memcpy(s_rx.buf + s_rx.have, data, len);
-    s_rx.have = static_cast<uint16_t>(s_rx.have + len);
-    if (s_rx.have < s_rx.total) return;
-    s_rx.buf[s_rx.have] = '\0';
-    s_rx.id = 0;
-    text = s_rx.buf;
-    len = s_rx.have;
+    memcpy(rx->buf + rx->have, data, len);
+    rx->have = static_cast<uint16_t>(rx->have + len);
+    if (rx->have < rx->total) return;
+    rx->buf[rx->have] = '\0';
+    rx->id = 0;  // free again; buf stays valid until the next data event
+    text = rx->buf;
+    len = rx->have;
   }
 
   if (CmdQueue::pushCommand(proto::Source::Ws, id, text, len)) return;
@@ -603,6 +665,10 @@ void begin(const Settings& s) {
   ip.fromString(AP_IP_STR);
   const IPAddress mask(255, 255, 255, 0);
 
+#if ENABLE_OTA
+  Ota::setPassword(pass);  // the one the AP really uses until the next restart
+#endif
+
   WiFi.persistent(false);  // settings live in our own NVS namespace
   WiFi.setSleep(false);
   WiFi.mode(WIFI_AP);
@@ -677,6 +743,8 @@ void broadcast(const char* data, size_t len) {
 
 uint8_t wsClients() { return s_wsCount.load(); }
 
+bool hasClient(uint32_t clientId) { return slotFind(clientId); }
+
 uint8_t stations() { return s_stations; }
 
 bool rssi(int8_t& out) {
@@ -728,6 +796,10 @@ void broadcast(const char* data, size_t len) {
   (void)len;
 }
 uint8_t wsClients() { return 0; }
+bool hasClient(uint32_t clientId) {
+  (void)clientId;
+  return false;
+}
 uint8_t stations() { return 0; }
 bool rssi(int8_t& out) {
   (void)out;

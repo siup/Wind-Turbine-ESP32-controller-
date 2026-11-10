@@ -1,9 +1,12 @@
 // Status LED patterns (single LED on ESP32, WS2812 colours on S3 via
 // rgbLedWrite). Non-blocking. Loop task only.
 //   Boot         solid
-//   Idle         1 Hz blink, short on        (AP up, nobody connected)
+//   Idle         1 Hz blink, short on        (AP up, nobody connected over
+//                                             WS / BLE, even with a latched
+//                                             disconnect / timeout failsafe)
 //   Connected    heartbeat, mostly on         (WS / BLE client present)
-//   Failsafe     4 Hz blink                   (amber on RGB)
+//   Failsafe     4 Hz blink                   (amber on RGB; only while a
+//                                             WS / BLE client is connected)
 //   BatteryCrit  double blink every second    (red on RGB)
 //   Ota          fast flicker                 (blue on RGB)
 //   Off          dark (led setting false)

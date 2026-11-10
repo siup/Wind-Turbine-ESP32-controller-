@@ -38,7 +38,7 @@ char g_replyBuf[192];  // ack / err / pong
 char g_stateBuf[768];
 char g_cfgBuf[1024];
 char g_infoBuf[512];
-char g_logBuf[2048];
+char g_logBuf[2304];  // a full 20-item log is about 2.2 kB
 
 LogItem g_logItems[EVENT_LOG_SIZE];
 
@@ -86,6 +86,23 @@ void replyFrame(ReplySink& sink, const char* buf, size_t n) {
 
 bool motorsIdleNow() { return rotorMotor.idle() && yaw.idle(); }
 
+// A WS / BLE client whose frames are still queued after it went away must
+// not start anything: it could not stop it any more, and as the new motion
+// owner it would cancel the disconnect trip (failsafe_logic.h). The
+// transports drop the client from their tables before they queue its
+// Disconnected event, so this holds whatever the order in the queue.
+bool clientGone(const InMsg& m) {
+  if (m.src == proto::Source::Ws) return !TransportWifi::hasClient(m.client);
+  if (m.src == proto::Source::Ble) return !TransportBle::hasPeer((uint16_t)m.client);
+  return false;
+}
+
+void logGone(const InMsg& m) {
+  char who[28];
+  formatClient(m, who, sizeof(who));
+  LOGW("motion from %s ignored: client gone", who);
+}
+
 // Index of the first kFieldIdleOnly field that differs between a and b, or -1.
 int idleOnlyChange(const Settings& a, const Settings& b) {
   for (size_t i = 0; i < kSettingsFieldCount; i++) {
@@ -122,6 +139,7 @@ void commitNext() {
 void doRotor(const InMsg& m, const Command& c, ReplySink& sink, uint32_t now) {
   const fs::ClientRef who{m.src, m.client};
   if (c.speed > 0) {
+    if (clientGone(m)) return logGone(m);
     const Err e = Failsafe::allowMotion();
     if (e != Err::None) return sendErr(sink, c, e);
     Failsafe::clearRuntime();
@@ -147,14 +165,16 @@ void doYaw(const InMsg& m, const Command& c, ReplySink& sink, uint32_t now) {
         yaw.stop(true);
         break;
       }
+      if (clientGone(m)) return logGone(m);
       e = Failsafe::allowMotion();
       if (e == Err::None) e = yaw.move(c.dir, c.yawSpeed, now);
       if (e == Err::None) Failsafe::onMotionCommand(who, now);
       break;
     case YawAction::Hold:
       yaw.hold(c.dir, now);
-      break;
+      return;  // no ack: holds repeat every 200 ms
     case YawAction::Goto:
+      if (clientGone(m)) return logGone(m);
       e = Failsafe::allowMotion();
       if (e == Err::None) e = yaw.gotoAngle(c.gotoDeg, now);
       if (e == Err::None) Failsafe::onMotionCommand(who, now);
@@ -315,9 +335,14 @@ void handle(const InMsg& msg, ReplySink& sink) {
     case Cmd::Info:
       replyFrame(sink, g_infoBuf, buildInfoFrame(g_infoBuf, sizeof(g_infoBuf)));
       break;
-    case Cmd::Log:
-      replyFrame(sink, g_logBuf, buildLogFrame(g_logBuf, sizeof(g_logBuf)));
+    case Cmd::Log: {
+      // BLE: only the newest items that fit one notification.
+      size_t cap = sizeof(g_logBuf);
+      const size_t lim = sink.maxLen();
+      if (lim > 0 && lim + 1 < cap) cap = lim + 1;
+      replyFrame(sink, g_logBuf, buildLogFrame(g_logBuf, cap));
       break;
+    }
     case Cmd::Reboot:
       sendAck(sink, c);
       appRequestReboot(300, "reboot command");

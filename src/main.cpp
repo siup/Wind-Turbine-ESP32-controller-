@@ -47,10 +47,16 @@ class WsSink : public ReplySink {
 };
 
 // BLE: errors and pongs always, acks only for frames that carried an "id".
+// Replies go to the central that wrote the command, not to every peer.
 class BleSink : public ReplySink {
  public:
-  void reply(const char* data, size_t len) override { TransportBle::notify(data, len); }
+  explicit BleSink(uint32_t handle) : handle_((uint16_t)handle) {}
+  void reply(const char* data, size_t len) override { TransportBle::sendTo(handle_, data, len); }
   bool wantsAck(bool hasId) const override { return hasId; }
+  size_t maxLen() const override { return TransportBle::maxFrameLen(handle_); }
+
+ private:
+  uint16_t handle_;
 };
 
 // HTTP: the request handler already answered; execution results show up in
@@ -106,7 +112,7 @@ constexpr uint32_t kInfoCacheMs = 5000;
 
 char g_telBuf[768];
 char g_bleBuf[256];
-char g_frameBuf[2048];  // cfg / info / log cache frames, evt frames
+char g_frameBuf[2304];  // cfg / info / log cache frames (a full log is ~2.2 kB), evt frames
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -199,7 +205,7 @@ void dispatch(const InMsg& m, bool afterEstop) {
           break;
         }
         case proto::Source::Ble: {
-          BleSink sink;
+          BleSink sink(m.client);
           Commands::handle(m, sink);
           break;
         }
@@ -255,12 +261,15 @@ void processQueue() {
   }
 }
 
+// With nobody connected (WS + BLE) the LED shows Idle even while a
+// disconnect / timeout failsafe is latched: that is the normal state after
+// the last phone left, not an alarm. Ota and BatteryCrit always show.
 StatusLed::Mode ledMode() {
   if (shared::otaActive.load() || Ota::active()) return StatusLed::Mode::Ota;
   if (Battery::crit()) return StatusLed::Mode::BatteryCrit;
+  if (TransportWifi::wsClients() + TransportBle::clientCount() == 0) return StatusLed::Mode::Idle;
   if (Failsafe::active()) return StatusLed::Mode::Failsafe;
-  if (TransportWifi::wsClients() + TransportBle::clientCount() > 0) return StatusLed::Mode::Connected;
-  return StatusLed::Mode::Idle;
+  return StatusLed::Mode::Connected;
 }
 
 // FNV-1a over the brief BLE frame: changes exactly when something a BLE
@@ -378,6 +387,10 @@ void appApplySettings(const Settings& prev, const Settings& next) {
   rc.invert = next.rotorRev;
   rc.slowDecay = MOTOR_SLOW_DECAY != 0;
   rotorMotor.configure(rc);
+  // rotorMax is the ceiling of the running speed too, not only of new
+  // commands: a lower value ramps a faster rotor down to it. Ownership does
+  // not change (no onMotionCommand). A failsafe ramp or a brake has target 0.
+  if (!boot && rotorMotor.target() > (int8_t)next.rotorMax) rotorMotor.setSpeed((int8_t)next.rotorMax);
 
   MotorDriver::Config yc;
   yc.maxDuty = next.yawDuty;
@@ -393,7 +406,8 @@ void appApplySettings(const Settings& prev, const Settings& next) {
   if (boot || prev.txPower != next.txPower) TransportWifi::setTxPower(next.txPower);
   TransportBle::configure(next);
   StatusLed::configure(next);
-  Ota::setPassword(next.apPass);
+  // The OTA password follows the AP password the network runs with, which
+  // changes only with a restart: TransportWifi::begin() sets it.
 }
 
 void appRequestReboot(uint32_t delayMs, const char* why) {

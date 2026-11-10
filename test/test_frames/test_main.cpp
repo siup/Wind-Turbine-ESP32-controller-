@@ -455,7 +455,7 @@ static void test_err() {
       "of range\"}",
       buf);
   // every code builds valid JSON with the default message
-  for (int e = (int)Err::BadJson; e <= (int)Err::Busy; e++) {
+  for (int e = (int)Err::BadJson; e <= (int)Err::Stale; e++) {
     size_t n = buildErr(Cmd::None, (Err)e, nullptr, nullptr, true, 1, buf, sizeof(buf));
     JsonDocument doc = parseBack(buf, n);
     TEST_ASSERT_EQUAL_STRING(proto::errCode((Err)e), doc["code"]);
@@ -480,6 +480,7 @@ static void test_protocol_names() {
   TEST_ASSERT_EQUAL_STRING("bad_json", proto::errCode(Err::BadJson));
   TEST_ASSERT_EQUAL_STRING("twist_limit", proto::errCode(Err::TwistLimit));
   TEST_ASSERT_EQUAL_STRING("busy_ota", proto::errCode(Err::BusyOta));
+  TEST_ASSERT_EQUAL_STRING("stale", proto::errCode(Err::Stale));
   TEST_ASSERT_NULL(proto::fsReasonName(FsReason::None));
   TEST_ASSERT_EQUAL_STRING("disconnect", proto::fsReasonName(FsReason::Disconnect));
   TEST_ASSERT_EQUAL_STRING("left", proto::yawDirName(YawDir::Left));

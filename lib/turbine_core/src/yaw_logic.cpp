@@ -105,6 +105,74 @@ bool EndstopDebouncer::update(bool rawActive, uint32_t nowMs, uint32_t debounceM
 }
 
 // ---------------------------------------------------------------------------
+// EndstopSideCheck
+// ---------------------------------------------------------------------------
+
+void EndstopSideCheck::reset() { *this = EndstopSideCheck{}; }
+
+void EndstopSideCheck::moveStarted(int8_t dir, bool lActive, bool rActive, int32_t balance) {
+  held_ = 0;
+  if (lActive && !rActive && dir > 0) held_ = -1;
+  if (rActive && !lActive && dir < 0) held_ = +1;
+  heldBal_ = balance;
+}
+
+bool EndstopSideCheck::recently(int8_t side, uint32_t nowMs) const {
+  if (side < 0) return droveL_ && (uint32_t)(nowMs - lastL_) < kSettleMs;
+  return droveR_ && (uint32_t)(nowMs - lastR_) < kSettleMs;
+}
+
+EndstopSideResult EndstopSideCheck::update(const EndstopSideInputs& in) {
+  EndstopSideResult r;
+  if (in.drive < 0) {
+    droveL_ = true;
+    lastL_ = in.nowMs;
+  } else if (in.drive > 0) {
+    droveR_ = true;
+    lastR_ = in.nowMs;
+  }
+
+  auto edge = [&](int8_t side) {
+    // Driving toward the switch now or just before: it may have closed
+    // because of that run (also right after a reversal).
+    const bool toward = in.drive == side || recently(side, in.nowMs);
+    const bool away = in.drive == -side || (in.drive == 0 && recently(-side, in.nowMs));
+    if (away && !toward) {
+      r.wrong = (int8_t)-side;
+    } else if (away) {
+      held_ = side;  // unclear: it has to open again as the yaw drives away
+      heldBal_ = in.balance;
+    } else if (side < 0) {
+      r.refL = true;
+    } else {
+      r.refR = true;
+    }
+  };
+  if (in.lRose) edge(-1);
+  if (in.rRose) edge(+1);
+
+  if (r.wrong == 0 && held_ != 0) {
+    const bool closed = held_ < 0 ? in.lActive : in.rActive;
+    if (!closed || in.commanded == 0) {
+      held_ = 0;
+    } else if (in.commanded == -held_ && in.drive == -held_) {
+      int64_t d = (int64_t)in.balance - (int64_t)heldBal_;
+      if (d < 0) d = -d;
+      if ((uint64_t)d >= in.releaseTravel) r.wrong = (int8_t)-held_;
+    }
+  }
+
+  if (r.wrong != 0) {
+    refused_ = r.wrong;
+    held_ = 0;
+    r.refL = r.refR = false;
+  } else if (refused_ != 0 && !in.lActive && !in.rActive) {
+    refused_ = 0;
+  }
+  return r;
+}
+
+// ---------------------------------------------------------------------------
 // Angles
 // ---------------------------------------------------------------------------
 

@@ -413,6 +413,13 @@ ParseResult parseCommand(const char* json, size_t len, Command& out, const Setti
   if (out.type == Cmd::None) return fail(Err::UnknownCmd, nullptr);
   if (idBad) return fail(Err::BadType, "id");
 
+  JsonVariantConst sq = obj["seq"];
+  if (!sq.isNull()) {
+    if (!sq.is<uint32_t>()) return fail(Err::BadType, "seq");
+    out.hasSeq = true;
+    out.seq = sq.as<uint32_t>();
+  }
+
   switch (out.type) {
     case Cmd::Rotor:
       return parseRotor(obj, out);

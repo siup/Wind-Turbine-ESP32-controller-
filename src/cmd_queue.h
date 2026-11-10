@@ -32,11 +32,16 @@ void begin();  // creates the FreeRTOS queue (CMD_QUEUE_DEPTH items)
 // caller should then answer err too_long / busy itself.
 bool pushCommand(proto::Source src, uint32_t client, const char* data, size_t len);
 
-// Any task, never blocks. Connect / disconnect notifications. Disconnected
-// is pushed to the front so the failsafe sees it before stale commands.
+// Any task, never blocks. Connect / disconnect notifications, in arrival
+// order with the commands (a client's own frames come before its
+// Disconnected). Commands::handle() also refuses motion from a WS / BLE
+// client that is already gone, so a departed client can never become the
+// motion owner, whatever the order.
 bool pushEvent(MsgKind kind, proto::Source src, uint32_t client);
 
-// Loop task only. Waits up to timeoutMs for a message.
+// Loop task only. Waits up to timeoutMs for a message. Connect / disconnect
+// events that did not fit into a full queue are handed out when the queue
+// is empty (they are newer than what was queued when they overflowed).
 bool receive(InMsg& out, uint32_t timeoutMs);
 
 // Messages rejected because the queue was full (diagnostics).

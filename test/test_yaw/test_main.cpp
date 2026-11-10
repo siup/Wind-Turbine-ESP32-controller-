@@ -394,6 +394,138 @@ static void test_goto_impossible() {
   TEST_ASSERT_EQUAL_INT8(0, s.dir);
 }
 
+// ---------------------------------------------------------------------------
+// EndstopSideCheck
+// ---------------------------------------------------------------------------
+
+// Small driver: drive (actual output sign), commanded direction, switches.
+struct SideRig {
+  EndstopSideCheck chk;
+  EndstopSideInputs in;
+  bool l = false, r = false;
+  SideRig() { in.releaseTravel = 1000; }
+  EndstopSideResult step(uint32_t now, int8_t drive, int8_t cmd, bool lNow, bool rNow, int32_t bal = 0) {
+    in.nowMs = now;
+    in.drive = drive;
+    in.commanded = cmd;
+    in.lRose = lNow && !l;
+    in.rRose = rNow && !r;
+    in.lActive = l = lNow;
+    in.rActive = r = rNow;
+    in.balance = bal;
+    return chk.update(in);
+  }
+};
+
+static void test_side_correct_switch_is_a_reference() {
+  SideRig g;
+  for (uint32_t t = 0; t < 500; t += 10) g.step(t, +1, +1, false, false, (int32_t)t);
+  EndstopSideResult r = g.step(500, +1, +1, false, true, 500);  // driving right, R closes
+  TEST_ASSERT_EQUAL_INT8(0, r.wrong);
+  TEST_ASSERT_TRUE(r.refR);
+  TEST_ASSERT_FALSE(r.refL);
+  TEST_ASSERT_EQUAL_INT8(0, g.chk.refused());
+  // a switch closing while nothing drives (turned by hand) is a reference too
+  SideRig h;
+  r = h.step(5000, 0, 0, true, false);
+  TEST_ASSERT_TRUE(r.refL);
+  TEST_ASSERT_EQUAL_INT8(0, r.wrong);
+}
+
+static void test_side_wrong_switch_edge_refuses() {
+  SideRig g;
+  for (uint32_t t = 0; t < 400; t += 10) g.step(t, -1, -1, false, false, -(int32_t)t);
+  // logical left for 400 ms, then R closes: the motor turns the other way
+  EndstopSideResult r = g.step(400, -1, -1, false, true, -400);
+  TEST_ASSERT_EQUAL_INT8(-1, r.wrong);
+  TEST_ASSERT_FALSE(r.refR);  // no bogus balance reference
+  TEST_ASSERT_TRUE(g.chk.blocked(-1));
+  TEST_ASSERT_FALSE(g.chk.blocked(+1));  // right stays blocked by the closed R switch itself
+  // stays refused while the switch is closed, clears when both are open
+  g.step(420, 0, 0, false, true);
+  TEST_ASSERT_TRUE(g.chk.blocked(-1));
+  g.step(440, 0, 0, false, false);
+  TEST_ASSERT_FALSE(g.chk.blocked(-1));
+}
+
+static void test_side_wrong_switch_after_stop() {
+  SideRig g;
+  for (uint32_t t = 0; t < 300; t += 10) g.step(t, +1, +1, false, false);
+  // braked, the nacelle runs on into L within the settle time
+  g.step(300, 0, 0, false, false);
+  EndstopSideResult r = g.step(340, 0, 0, true, false);
+  TEST_ASSERT_EQUAL_INT8(+1, r.wrong);
+  TEST_ASSERT_TRUE(g.chk.blocked(+1));
+  // reset (yawInvert changed) forgets it
+  g.chk.reset();
+  TEST_ASSERT_FALSE(g.chk.blocked(+1));
+}
+
+static void test_side_reversal_is_not_wrong() {
+  SideRig g;
+  for (uint32_t t = 0; t < 300; t += 10) g.step(t, +1, +1, false, false, (int32_t)t);
+  // reversed to the left; R closes 60 ms later from the run to the right
+  g.step(300, -1, -1, false, false, 300);
+  EndstopSideResult r = g.step(360, -1, -1, false, true, 290);
+  TEST_ASSERT_EQUAL_INT8(0, r.wrong);
+  TEST_ASSERT_FALSE(r.refR);  // unclear: no reference either
+  // it opens again while the yaw drives away: fine
+  r = g.step(400, -1, -1, false, false, 280);
+  TEST_ASSERT_EQUAL_INT8(0, r.wrong);
+  r = g.step(3000, -1, -1, false, false, -2000);
+  TEST_ASSERT_EQUAL_INT8(0, r.wrong);
+  TEST_ASSERT_EQUAL_INT8(0, g.chk.refused());
+}
+
+static void test_side_reversal_then_still_closed_is_wrong() {
+  SideRig g;
+  for (uint32_t t = 0; t < 300; t += 10) g.step(t, +1, +1, false, false, (int32_t)t);
+  g.step(300, -1, -1, false, false, 300);
+  g.step(360, -1, -1, false, true, 290);  // unclear edge
+  // the switch stays closed although the yaw keeps driving "away" from it
+  EndstopSideResult r = g.step(900, -1, -1, false, true, -500);
+  TEST_ASSERT_EQUAL_INT8(0, r.wrong);  // 790 of 1000 travel
+  r = g.step(1200, -1, -1, false, true, -711);
+  TEST_ASSERT_EQUAL_INT8(-1, r.wrong);
+}
+
+static void test_side_start_on_wrong_switch() {
+  SideRig g;
+  g.step(0, 0, 0, false, true);  // resting on R (no edge later)
+  g.chk.moveStarted(-1, false, true, 5000);
+  EndstopSideResult r = g.step(10, -1, -1, false, true, 4990);
+  TEST_ASSERT_EQUAL_INT8(0, r.wrong);
+  r = g.step(800, -1, -1, false, true, 4001);
+  TEST_ASSERT_EQUAL_INT8(0, r.wrong);  // 999 < 1000
+  r = g.step(810, -1, -1, false, true, 4000);
+  TEST_ASSERT_EQUAL_INT8(-1, r.wrong);
+  TEST_ASSERT_TRUE(g.chk.blocked(-1));
+
+  // the right switch opens in time: no error
+  SideRig h;
+  h.step(0, 0, 0, false, true);
+  h.chk.moveStarted(-1, false, true, 0);
+  h.step(100, -1, -1, false, true, -100);
+  r = h.step(200, -1, -1, false, false, -200);
+  r = h.step(3000, -1, -1, false, false, -3000);
+  TEST_ASSERT_EQUAL_INT8(0, r.wrong);
+  TEST_ASSERT_EQUAL_INT8(0, h.chk.refused());
+
+  // the move ends before the travel: forgotten, the next move starts over
+  SideRig k;
+  k.step(0, 0, 0, true, false);
+  k.chk.moveStarted(+1, true, false, 0);
+  k.step(100, +1, +1, true, false, 900);
+  k.step(110, 0, 0, true, false, 900);  // stopped
+  r = k.step(120, +1, +1, true, false, 1500);
+  TEST_ASSERT_EQUAL_INT8(0, r.wrong);
+  // moving toward a closed switch (refused elsewhere) is not this check's business
+  SideRig m;
+  m.chk.moveStarted(+1, false, true, 0);
+  r = m.step(100, +1, +1, false, true, 5000);
+  TEST_ASSERT_EQUAL_INT8(0, r.wrong);
+}
+
 int main(int argc, char** argv) {
   (void)argc;
   (void)argv;
@@ -417,5 +549,11 @@ int main(int argc, char** argv) {
   RUN_TEST(test_goto_window_and_slow_zone);
   RUN_TEST(test_goto_long_way_under_twist_limit);
   RUN_TEST(test_goto_impossible);
+  RUN_TEST(test_side_correct_switch_is_a_reference);
+  RUN_TEST(test_side_wrong_switch_edge_refuses);
+  RUN_TEST(test_side_wrong_switch_after_stop);
+  RUN_TEST(test_side_reversal_is_not_wrong);
+  RUN_TEST(test_side_reversal_then_still_closed_is_wrong);
+  RUN_TEST(test_side_start_on_wrong_switch);
   return UNITY_END();
 }

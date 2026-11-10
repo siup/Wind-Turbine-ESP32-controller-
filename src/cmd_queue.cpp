@@ -2,10 +2,12 @@
 //
 // A statically allocated FreeRTOS queue of InMsg. Producers never block
 // (timeout 0). {"t":"stop"} raises shared::estopRequested before anything
-// else and jumps to the front of the queue. Connect / disconnect events that
-// do not fit into a full queue go to a tiny overflow list that receive()
-// drains first, so the failsafe never loses a disconnect because a client
-// flooded the queue.
+// else and jumps to the front of the queue. Everything else, connect and
+// disconnect events included, keeps its arrival order. Events that do not
+// fit into a full queue go to a tiny overflow list, so the failsafe never
+// loses a disconnect because a client flooded the queue; receive() hands
+// them out once the queue is empty (a delay there is bounded by the owner
+// timeout, which also stops the motors of a client that went silent).
 #include "cmd_queue.h"
 
 #include <Arduino.h>
@@ -122,9 +124,7 @@ bool pushEvent(MsgKind kind, proto::Source src, uint32_t client) {
     msg.kind = kind;
     msg.src = src;
     msg.client = client;
-    const BaseType_t ok = (kind == MsgKind::Disconnected) ? xQueueSendToFront(s_queue, &msg, 0)
-                                                          : xQueueSendToBack(s_queue, &msg, 0);
-    if (ok == pdTRUE) return true;
+    if (xQueueSendToBack(s_queue, &msg, 0) == pdTRUE) return true;
   }
   if (overflowPush(kind, src, client)) return true;
   s_dropped.fetch_add(1);
@@ -132,16 +132,15 @@ bool pushEvent(MsgKind kind, proto::Source src, uint32_t client) {
 }
 
 bool receive(InMsg& out, uint32_t timeoutMs) {
-  // Events that did not fit into the queue come first (they are older than
-  // anything still waiting in it, and disconnects matter to the failsafe).
+  // Queued messages first: an overflowed event is newer than everything
+  // that was in the full queue when it arrived, and a client's frames must
+  // not run after its own Disconnected.
+  if (s_queue && xQueueReceive(s_queue, &out, 0) == pdTRUE) return true;
   if (s_ovPending.load() && overflowPop(out)) return true;
-  if (!s_queue) return false;
+  if (!s_queue || timeoutMs == 0) return false;
 
-  TickType_t ticks = 0;
-  if (timeoutMs > 0) {
-    ticks = pdMS_TO_TICKS(timeoutMs);
-    if (ticks == 0) ticks = 1;
-  }
+  TickType_t ticks = pdMS_TO_TICKS(timeoutMs);
+  if (ticks == 0) ticks = 1;
   return xQueueReceive(s_queue, &out, ticks) == pdTRUE;
 }
 

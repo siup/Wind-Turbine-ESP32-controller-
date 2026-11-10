@@ -25,6 +25,14 @@ void tick(uint32_t nowMs, uint8_t wifiStations);  // advertising policy
 // Notify all connected peers. Frames longer than (peer MTU - 3) are skipped
 // for that peer (logged once per connection).
 void notify(const char* data, size_t len);
+// One peer only (replies to the central that wrote the command). Same
+// subscription and MTU checks as notify().
+void sendTo(uint16_t handle, const char* data, size_t len);
+// Longest frame that can be notified to this peer (MTU - 3), 0 if unknown.
+size_t maxFrameLen(uint16_t handle);
+// Peer still connected (its entry is removed before its Disconnected event
+// is queued). Any task.
+bool hasPeer(uint16_t handle);
 uint8_t clientCount();
 bool rssi(int8_t& out);
 

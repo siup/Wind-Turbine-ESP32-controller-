@@ -13,6 +13,8 @@ struct Command {
   proto::Cmd type = proto::Cmd::None;
   bool hasId = false;  // optional "id" (uint32) echoed in ack / err / pong
   uint32_t id = 0;
+  bool hasSeq = false;  // optional "seq" (uint32): send order, checked for HTTP only
+  uint32_t seq = 0;     // (see StopSeqGuard)
 
   // rotor: {"t":"rotor","speed":0..100[,"brake":true]}
   uint8_t speed = 0;
@@ -48,6 +50,7 @@ proto::Cmd peekCommandType(const char* json, size_t len);
 //  - wrong type / missing field  -> BadType, field = key
 //  - value outside range / enum  -> OutOfRange, field = key
 //  - unknown keys are ignored
+//  - "id" and "seq" are optional uint32 values (BadType otherwise)
 // rotor.speed accepts integers or floats (rounded); yaw "speed" 20..100.
 // A yaw frame must carry exactly one of dir / hold / goto / zero / cal.
 //

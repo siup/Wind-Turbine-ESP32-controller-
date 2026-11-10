@@ -251,6 +251,27 @@ static void test_id_kept_on_field_error() {
   TEST_ASSERT_EQUAL_UINT32(3, c.id);
 }
 
+static void test_seq() {
+  Command c;
+  ASSERT_OK(parse("{\"t\":\"rotor\",\"speed\":30,\"seq\":4294967295}", c));
+  TEST_ASSERT_TRUE(c.hasSeq);
+  TEST_ASSERT_EQUAL_UINT32(4294967295u, c.seq);
+  TEST_ASSERT_FALSE(c.hasId);
+  ASSERT_OK(parse("{\"t\":\"stop\",\"seq\":17,\"id\":3}", c));
+  TEST_ASSERT_TRUE(c.hasSeq);
+  TEST_ASSERT_EQUAL_UINT32(17u, c.seq);
+  TEST_ASSERT_EQUAL_UINT32(3u, c.id);
+  ASSERT_OK(parse("{\"t\":\"ping\",\"seq\":null}", c));
+  TEST_ASSERT_FALSE(c.hasSeq);
+  ASSERT_OK(parse("{\"t\":\"ping\"}", c));
+  TEST_ASSERT_FALSE(c.hasSeq);
+  ASSERT_ERR(parse("{\"t\":\"rotor\",\"speed\":3,\"seq\":-1}", c), Err::BadType, "seq");
+  ASSERT_ERR(parse("{\"t\":\"rotor\",\"speed\":3,\"seq\":4294967296}", c), Err::BadType, "seq");
+  ASSERT_ERR(parse("{\"t\":\"stop\",\"seq\":\"5\"}", c), Err::BadType, "seq");
+  ASSERT_ERR(parse("{\"t\":\"stop\",\"seq\":1.5}", c), Err::BadType, "seq");
+  TEST_ASSERT_EQUAL_INT((int)Cmd::Stop, (int)c.type);  // still known for the "of" field
+}
+
 static void test_command_is_reset() {
   Command c;
   ASSERT_OK(parse("{\"t\":\"rotor\",\"speed\":50,\"brake\":true,\"id\":4}", c));
@@ -682,6 +703,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_simple_commands);
   RUN_TEST(test_id);
   RUN_TEST(test_id_kept_on_field_error);
+  RUN_TEST(test_seq);
   RUN_TEST(test_command_is_reset);
   RUN_TEST(test_rotor_speed);
   RUN_TEST(test_rotor_errors);

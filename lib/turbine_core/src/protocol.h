@@ -41,6 +41,7 @@ enum class Err : uint8_t {
   TwistLimit,  // "twist_limit"
   Endstop,     // "endstop"
   Busy,        // "busy": needs motors stopped / queue full
+  Stale,       // "stale": HTTP motion frame sent before the client's last stop
 };
 
 // Failsafe reasons in ascending priority. The reported reason is the
