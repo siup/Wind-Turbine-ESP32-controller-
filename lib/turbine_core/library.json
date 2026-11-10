@@ -1,0 +1,10 @@
+{
+  "name": "turbine_core",
+  "version": "1.0.0",
+  "description": "Hardware-independent logic of the turbine controller: protocol, parser, frames, settings model, ramp, battery math, yaw logic, failsafe state machine. Builds on the ESP32 and on the host (native unit tests).",
+  "frameworks": "*",
+  "platforms": "*",
+  "build": {
+    "flags": ["-Wall", "-Wextra", "-I$PROJECT_INCLUDE_DIR"]
+  }
+}
