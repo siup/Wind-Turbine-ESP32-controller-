@@ -55,9 +55,9 @@ constexpr uint32_t kHousekeepMs = 1000;
 
 // Built-in page for a device whose LittleFS has no panel yet.
 const char kFallbackPage[] = R"HTML(<!doctype html>
-<html lang="pl"><head><meta charset="utf-8">
+<html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Turbina: serwis</title>
+<title>Turbine maintenance</title>
 <style>
 :root{color-scheme:dark}*{box-sizing:border-box}
 body{margin:0;background:#131518;color:#d5d9de;font:15px/1.45 system-ui,sans-serif}
@@ -78,37 +78,37 @@ button{min-height:56px;font-weight:700;letter-spacing:.12em;text-transform:upper
 #bar{height:100%;width:0;background:#f2b705;transition:width .2s}
 #msg{margin-top:8px;min-height:1.4em;font:13px ui-monospace,monospace}
 </style></head><body><div class="tape"></div><main>
-<h1>Turbina / serwis</h1>
-<section><h2>Brak panelu sterowania</h2>
-<p>W pamięci LittleFS nie ma plików panelu (katalog <b>data/</b>). Wgraj je kablem USB:</p>
+<h1>Turbine / maintenance</h1>
+<section><h2>No control panel</h2>
+<p>LittleFS holds no panel files (the <b>data/</b> folder). Upload them over USB:</p>
 <code>pio run -e esp32dev -t uploadfs</code>
-<p>albo plikiem <b>littlefs.bin</b> z tej strony. Plik powstaje poleceniem:</p>
+<p>or upload <b>littlefs.bin</b> from this page. Build it with:</p>
 <code>pio run -e esp32dev -t buildfs</code>
-<p>i leży w <b>.pio/build/esp32dev/littlefs.bin</b>. Dla ESP32-S3 użyj -e esp32-s3-devkitc-1.</p></section>
-<section><h2>Wgrywanie</h2><form id="f">
-<label for="type">Typ pliku</label>
-<select id="type"><option value="fs">Panel (littlefs.bin)</option><option value="fw">Firmware (firmware.bin)</option></select>
-<label for="file">Plik</label><input id="file" type="file" accept=".bin">
-<label for="pw">Hasło sieci WiFi (AP)</label><input id="pw" type="password" autocomplete="current-password">
-<button id="go" type="submit">Wgraj</button>
+<p>The file lands in <b>.pio/build/esp32dev/littlefs.bin</b>. For ESP32-S3 use -e esp32-s3-devkitc-1.</p></section>
+<section><h2>Upload</h2><form id="f">
+<label for="type">File type</label>
+<select id="type"><option value="fs">Filesystem (littlefs.bin)</option><option value="fw">Firmware (firmware.bin)</option></select>
+<label for="file">File</label><input id="file" type="file" accept=".bin">
+<label for="pw">Network password (AP)</label><input id="pw" type="password" autocomplete="current-password">
+<button id="go" type="submit">Upload</button>
 <div class="bar"><div id="bar"></div></div><div id="msg"></div></form></section>
-<section><h2>Awaria</h2><button id="stop" type="button">Stop wszystko</button></section>
+<section><h2>Emergency</h2><button id="stop" type="button">Emergency stop</button></section>
 </main><script>
 var $=function(i){return document.getElementById(i)},msg=function(t){$('msg').textContent=t};
-var errs={'motors running':'silniki pracują, zatrzymaj je','busy':'trwa inna aktualizacja','firmware image sent as fs':'to jest plik firmware, wybierz typ Firmware','not a firmware image':'to nie jest plik firmware, wybierz typ Panel','empty file':'pusty plik','no file in request':'brak pliku','incomplete upload':'wysyłanie przerwane'};
+var errs={'motors running':'motors running, stop them first','busy':'another update is in progress','firmware image sent as fs':'this is a firmware file, select Firmware','not a firmware image':'not a firmware file, select Filesystem','empty file':'empty file','no file in request':'no file received','incomplete upload':'upload interrupted'};
 $('f').onsubmit=function(e){e.preventDefault();var file=$('file').files[0];
-if(!file){msg('Wybierz plik.');return}
+if(!file){msg('Select a file.');return}
 var fd=new FormData();fd.append('file',file,file.name);
 var x=new XMLHttpRequest();x.open('POST','/update?type='+$('type').value);
 x.setRequestHeader('Authorization','Basic '+btoa(')HTML" OTA_USER R"HTML(:'+$('pw').value));
-x.upload.onprogress=function(ev){if(ev.lengthComputable){var p=Math.round(ev.loaded*100/ev.total);$('bar').style.width=p+'%';msg('Wysyłanie: '+p+' %')}};
+x.upload.onprogress=function(ev){if(ev.lengthComputable){var p=Math.round(ev.loaded*100/ev.total);$('bar').style.width=p+'%';msg('Uploading '+p+'%')}};
 x.onload=function(){var r={};try{r=JSON.parse(x.responseText)}catch(_){}
-if(x.status==200){$('bar').style.width='100%';msg('Gotowe. Restart urządzenia, strona odświeży się za 10 s.');setTimeout(function(){location.reload()},10000);return}
+if(x.status==200){$('bar').style.width='100%';msg('Done. The controller is restarting, this page reloads in 10 s.');setTimeout(function(){location.reload()},10000);return}
 $('go').disabled=false;
-if(x.status==401)msg('Złe hasło.');else msg('Błąd '+x.status+': '+(errs[r.error]||'zapis obrazu nie powiódł się'))};
-x.onerror=function(){$('go').disabled=false;msg('Błąd połączenia.')};
-$('go').disabled=true;msg('Wysyłanie...');x.send(fd)};
-$('stop').onclick=function(){fetch('/api/cmd',{method:'POST',body:'{"t":"stop"}'}).then(function(){msg('Wysłano STOP.')},function(){msg('Brak połączenia.')})};
+if(x.status==401)msg('Wrong network password.');else msg('Error '+x.status+': '+(errs[r.error]||'image write failed'))};
+x.onerror=function(){$('go').disabled=false;msg('Connection error.')};
+$('go').disabled=true;msg('Uploading...');x.send(fd)};
+$('stop').onclick=function(){fetch('/api/cmd',{method:'POST',body:'{"t":"stop"}'}).then(function(){msg('STOP sent.')},function(){msg('No connection.')})};
 </script></body></html>
 )HTML";
 
@@ -400,7 +400,7 @@ void handleNotFound(AsyncWebServerRequest* req) {
     req->redirect(kPortalUrl);
     return;
   }
-  req->send(404, "text/plain", "404: nie ma takiej strony");
+  req->send(404, "text/plain", "404: page not found");
 }
 
 bool isLongCacheAsset(AsyncWebServerRequest* req) {

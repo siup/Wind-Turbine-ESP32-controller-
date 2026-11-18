@@ -2,7 +2,7 @@
 
 Firmware na ESP32 i panel w przeglądarce telefonu do sterowania modelem turbiny. Rotor kręci się z regulowaną prędkością i miękkim startem, gondola (yaw) obraca się w lewo i w prawo, dopóki trzymasz przycisk. ESP wystawia własną sieć WiFi i serwuje panel z pamięci, więc na telefonie nic nie trzeba instalować. Jest też BLE dla Chrome na Androidzie.
 
-Kod i komentarze są po angielsku, interfejs po polsku. Specyfikacja, z której to wyrosło, leży osobno; tu jest opis tego, co faktycznie zrobiliśmy, jak to wgrać i jak sprawdzić na stole.
+Kod, komentarze i interfejs są po angielsku, dokumentacja po polsku. Specyfikacja, z której to wyrosło, leży osobno; tu jest opis tego, co faktycznie zrobiliśmy, jak to wgrać i jak sprawdzić na stole.
 
 ## Sprzęt
 
@@ -64,7 +64,7 @@ pio run -e esp32dev -t uploadfs    # panel WWW
 pio device monitor                 # konsola, 115200
 ```
 
-Przed każdym buildem skrypt `tools/build_web.py` pakuje `data/` gzipem do `.pio/webfs` i pilnuje, żeby `index.html` nie przekroczył 60 kB. Jeśli wgrasz sam firmware bez panelu, ESP pokaże pod 192.168.4.1 prostą stronę z formularzem do wgrania `littlefs.bin`.
+Przed każdym buildem skrypt `tools/build_web.py` pakuje `data/` gzipem do `.pio/webfs` i pilnuje rozmiaru: `index.html` najwyżej 60 kB, `viz.js` (widok 3D) najwyżej 24 kB. Z `index.html` zdejmuje przy tym wcięcia, komentarze i zbędne nowe linie w skrypcie i stylach, więc w repozytorium kod zostaje czytelny, a limit dotyczy tego, co faktycznie ląduje w ESP. Jeśli wgrasz sam firmware bez panelu, ESP pokaże pod 192.168.4.1 prostą stronę z formularzem do wgrania `littlefs.bin`.
 
 Środowiska:
 
@@ -81,20 +81,21 @@ Przed każdym buildem skrypt `tools/build_web.py` pakuje `data/` gzipem do `.pio
 2. Na telefonie połącz się z siecią `Turbina-XXXX` (XXXX to końcówka adresu MAC, widać ją też w konsoli przy starcie). Hasło: `turbina123`.
 3. Otwórz `http://192.168.4.1`.
 
-Android potrafi po chwili zapytać, czy zostać w sieci bez internetu. Odpowiedz, że tak, inaczej telefon ucieknie na dane komórkowe. Hasło sieci zmienisz w panelu (Konfiguracja, Sieć) i warto to zrobić od razu. Panel można dodać do ekranu głównego, wtedy otwiera się na pełnym ekranie.
+Android potrafi po chwili zapytać, czy zostać w sieci bez internetu. Odpowiedz, że tak, inaczej telefon ucieknie na dane komórkowe. Hasło sieci zmienisz w panelu (zębatka w prawym górnym rogu, NETWORK) i warto to zrobić od razu. Panel można dodać do ekranu głównego, wtedy otwiera się na pełnym ekranie.
 
 ## Panel
 
-Panel to jeden plik `index.html` bez zewnętrznych zasobów, ciemny, w stylu panelu operatorskiego. Od góry:
+Panel to plik `index.html` bez zewnętrznych zasobów (plus `viz.js`, dociągany dopiero przy pierwszym włączeniu widoku 3D), ciemny, w stylu panelu operatorskiego, z napisami po angielsku. Sterowanie mieści się na jednym ekranie: na typowym telefonie (sprawdzone przy 390x844 i 412x915) cały rotor, LEFT, RIGHT i suwak YAW SPEED widać nad EMERGENCY STOP bez przewijania, a na mniejszym (360x740) w całości widać jeszcze LEFT i RIGHT. Od góry:
 
-- **Pasek statusu.** Rodzaj połączenia (WS, HTTP albo BLE), siła sygnału, opóźnienie w ms mierzone na pingach i bateria w procentach z kolorem.
-- **Banery.** Failsafe z powodem, niska bateria, brak baterii, brak połączenia z odliczaniem do kolejnej próby, limit skrętu przewodów, błąd czujnika albo krańcówek, trwająca kalibracja obrotu, wymagany restart.
-- **Rotor.** Wskaźnik prędkości rzeczywistej i zadanej (widać rampę, strefa ponad `rotorMax` jest zakreskowana), START / STOP, HAMUJ, suwak nastawy z przyciskami -5 / +5 i presetami 25 / 50 / 75 / 100, czas pracy i pozostały czas, gdy jest limit. Suwak rusza się tylko, gdy przeciągasz go za uchwyt: przesunięcie palcem po torze przewija stronę i nie zmienia prędkości.
-- **Gondola.** LEWO i PRAWO działają tylko na przytrzymanie. Kompas pojawia się, gdy jest czujnik AS5600 albo szacunek z czasu obrotu (wtedy kąt ma dopisek, że to przybliżenie). Pod spodem wskaźnik skrętu przewodów (w stopniach przy limicie w stopniach, inaczej w sekundach salda), suwak prędkości i pole "jedź do kąta" przy AS5600.
-- **STOP WSZYSTKO.** Czerwony przycisk przyklejony do dołu ekranu, zawsze widoczny. Wysyła stop każdą dostępną drogą naraz (WebSocket, HTTP, BLE).
-- **Konfiguracja.** Kalibracja czasu obrotu, zerowanie pozycji, bateria (typ, progi, kalibracja multimetrem), sieć, bezpieczeństwo, aktualizacja OTA, restart, reset fabryczny, log zdarzeń i ustawienia samego panelu (wibracje, pola zaawansowane, blokada wygaszania ekranu). Liczby wpisujesz z przecinkiem albo kropką. Progi baterii panel sprawdza od razu (krytyczny poniżej ostrzeżenia, 0 % poniżej 100 %). Konfiguracja działa przez WiFi, po BLE jest tylko podgląd.
+- **Pasek statusu.** Rodzaj połączenia (WS, HTTP, BLE albo OFFLINE) z nazwą sterownika, siła sygnału w dBm z opóźnieniem w ms mierzonym na pingach i bateria w procentach z napięciem i kolorowym paskiem. Na końcu dwa przyciski: **3D / PANEL** przełącza widok, a zębatka otwiera stronę ustawień. Wybrany widok panel pamięta.
+- **Pasek alarmów.** Jedna linia pod paskiem statusu, zawsze tej samej wysokości, zamiast dawnych banerów. Gdy nic się nie dzieje, pokazuje SYSTEM OK, inaczej najważniejszy alarm i licznik pozostałych (np. "+2"). Dotknięcie otwiera nakładkę z pełną listą i przyciskami (RETRY, FINISH i CANCEL przy kalibracji, RESTART), a CLOSE albo dotknięcie tła tylko ją zamyka. Nakładka niczego nie przesuwa, a EMERGENCY STOP zostaje nad nią i działa. Alarmy to m.in. CONNECTION LOST z odliczaniem do kolejnej próby, FAILSAFE z powodem, BATTERY CRITICAL, LOW BATTERY, NO BATTERY READING, TWIST LIMIT, SENSOR FAULT albo ENDSTOP FAULT, ROTATION CALIBRATION w trakcie kalibracji i PENDING CHANGES, gdy zmiana czeka na restart.
+- **Rotor (M1 · ROTOR).** Po lewej wskaźnik prędkości rzeczywistej i zadanej (widać rampę, strefa ponad `rotorMax` jest zakreskowana). Po prawej prędkość w procentach, TARGET i SETPOINT, RUN TIME i REMAINING (gdy jest limit czasu pracy) oraz ▶ START / ■ STOP i BRAKE. Pod spodem suwak nastawy i jeden rząd przycisków −5, 25, 50, 75, 100, +5. Suwak rusza się tylko, gdy przeciągasz go za uchwyt: przesunięcie palcem po torze przewija stronę i nie zmienia prędkości.
+- **Gondola (M2 · NACELLE).** Kompas, gdy jest czujnik AS5600 albo szacunek z czasu obrotu (wtedy kąt ma znak ≈ i dopisek ESTIMATED FROM TIME), a bez tego wskaźnik kierunku ruchu. Obok kąt i CABLE TWIST, czyli wskaźnik skrętu przewodów (w stopniach przy limicie w stopniach, inaczej w sekundach salda). Niżej ◀ LEFT i RIGHT ▶, które działają tylko na przytrzymanie, suwak YAW SPEED i przy AS5600 pole GO TO ANGLE (to już może wymagać przewinięcia). Nic nad LEFT i RIGHT nie zmienia wysokości, więc przyciski nie przesuwają się pod palcem, nawet gdy w trakcie trzymania pojawi się alarm.
+- **Widok 3D.** Zamiast paneli M1 i M2 model turbiny: wieża, gondola i trzy łopaty, na ziemi kompas z kątami, spirala skrętu przewodów (czerwienieje przy limicie) i czerwone kreski limitów. Model pokazuje to, co raportuje sterownik, a nie ruch palca: łopaty kręcą się z rzeczywistą prędkością rotora, gondola stoi pod kątem z czujnika albo z szacunku, a gdy sterownik odmówi, model się nie ruszy. Rotor kręcisz palcem jak zabawkowy wiatraczek: machnięcie po łopatach wzdłuż obrotu rozkręca go tym mocniej, im szybszy ruch, a potem rotor sam zwalnia i staje (ze 100 % po około 8 s, bez hamowania). Kolejne machnięcie dokłada, machnięcie pod prąd przyhamowuje, a stuknięcie w piastę zatrzymuje od razu. Gondolę obracasz, przeciągając palcem w bok pod turbiną, jak talerz obrotowy: bliższa strona idzie za palcem, im dalej, tym szybciej, a puszczenie zatrzymuje (to ten sam hold-to-run co LEFT i RIGHT, z tym samym deadmanem). Z czujnikiem AS5600 przeciąganie ustawia kontur docelowej pozycji, a puszczenie wysyła GO TO ANGLE. Widok nie ma własnego połączenia, wysyła wszystko tą samą drogą co przyciski. Wybieg rotora kończy się sam, gdy użyjesz EMERGENCY STOP, START/STOP albo suwaka w panelu, zadziała failsafe albo zniknie łączność.
+- **EMERGENCY STOP.** Czerwony przycisk przyklejony do dołu ekranu, zawsze widoczny. Wysyła stop każdą dostępną drogą naraz (WebSocket, HTTP, BLE).
+- **SETTINGS** (osobna strona pod zębatką, wraca się przyciskiem BACK, zębatką albo systemowym "wstecz" w telefonie; pasek statusu, alarmy i EMERGENCY STOP zostają na miejscu). Sekcje ROTOR i NACELLE (ustawienia silników, w NACELLE także kalibracja czasu obrotu i zerowanie pozycji), BATTERY (typ, progi, kalibracja multimetrem), NETWORK, SAFETY, SYSTEM (aktualizacja OTA, restart, reset fabryczny), EVENT LOG i INTERFACE (ustawienia samego panelu: wibracje, pola zaawansowane, blokada wygaszania ekranu). Liczby wpisujesz z przecinkiem albo kropką, panel wyświetla je z kropką. Progi baterii panel sprawdza od razu (krytyczny poniżej ostrzeżenia, 0 % poniżej 100 %). Konfiguracja działa przez WiFi, po BLE jest tylko podgląd.
 
-Panel łączy się przez WebSocket. Jeśli ten nie ruszy w 3 s, przechodzi na zapytania HTTP co 500 ms i dalej próbuje WebSocket. Po zerwaniu próbuje ponownie co 2 s, z wydłużaniem do 10 s. W trybie HTTP komendy idą po jednej i z numerem kolejnym (`seq`), a STOP od razu: dzięki temu spóźniony START nie uruchomi rotora po STOP-ie (szczegóły w [docs/PROTOCOL.md](docs/PROTOCOL.md), sekcja HTTP). Zmianę ustawień przez HTTP panel sprawdza ponownym pobraniem konfiguracji i pokazuje, gdy sterownik jej nie przyjął. Przyciski ruchu są nieaktywne bez połączenia, przy krytycznej baterii i w trakcie aktualizacji.
+Panel łączy się przez WebSocket. Jeśli ten nie ruszy w 3 s, przechodzi na zapytania HTTP co 500 ms i dalej próbuje WebSocket. Po zerwaniu próbuje ponownie co 2 s, z wydłużaniem do 10 s. W trybie HTTP komendy idą po jednej i z numerem kolejnym (`seq`), a STOP od razu: dzięki temu spóźniony START nie uruchomi rotora po STOP-ie (szczegóły w [docs/PROTOCOL.md](docs/PROTOCOL.md), sekcja HTTP). Zmianę ustawień przez HTTP panel sprawdza ponownym pobraniem konfiguracji i pokazuje, gdy sterownik jej nie przyjął. Przyciski ruchu są nieaktywne bez połączenia, przy krytycznej baterii i w trakcie aktualizacji, a powód (np. NOT CONNECTED) widać wtedy na suwaku rotora i na przyciskach gondoli.
 
 **Dioda statusu** na płytce: krótki błysk co sekundę, gdy nikt nie jest połączony przez WebSocket ani BLE (także po zadziałaniu failsafe przy rozłączeniu, to normalny stan), "bicie serca" przy połączonym telefonie, szybkie miganie 4 Hz przy failsafe z połączonym telefonem, podwójny błysk przy krytycznej baterii, migotanie w trakcie OTA. Na S3 kolory: zielony, bursztynowy, czerwony, niebieski.
 
@@ -121,27 +122,27 @@ Tryb wybierasz jedną linijką w `include/config.h`:
 
 Panel niczego nie trzeba zmieniać, sam reaguje na pola w telemetrii.
 
-**Bez czujnika** (domyślnie) firmware liczy saldo ruchu w lewo i w prawo, ważone prędkością. Po ustawieniu `yawMaxBal` nie pozwoli skręcić przewodów dalej niż ten próg. Saldo zapisuje się w pamięci, więc przeżywa reset. Najwygodniej zacząć od kalibracji: Konfiguracja, Kalibracja obrotu, START POMIARU, obróć gondolę dokładnie raz, ZAKOŃCZ. Od tej chwili panel pokazuje szacowany kąt, a przy polu "Limit skrętu" (w sekundach) podpowiada, ilu to obrotom odpowiada, więc limit dobierzesz z zapasem około 20 %. To szacunek, nie pomiar, więc co jakiś czas ustaw gondolę prosto i naciśnij ZERUJ POZYCJĘ.
+**Bez czujnika** (domyślnie) firmware liczy saldo ruchu w lewo i w prawo, ważone prędkością. Po ustawieniu `yawMaxBal` nie pozwoli skręcić przewodów dalej niż ten próg. Saldo zapisuje się w pamięci, więc przeżywa reset. Najwygodniej zacząć od kalibracji: SETTINGS, NACELLE, ROTATION CALIBRATION, START MEASUREMENT, obróć gondolę dokładnie raz, FINISH. Od tej chwili panel pokazuje szacowany kąt, a przy polu "Twist limit" (w sekundach) podpowiada, ilu to obrotom odpowiada, więc limit dobierzesz z zapasem około 20 %. To szacunek, nie pomiar, więc co jakiś czas ustaw gondolę prosto i naciśnij ZERO POSITION.
 
-**Krańcówki**: dwa styki zwierane do masy na GPIO 16 i 17. Dotknięcie krańcówki od razu zatrzymuje ruch w tę stronę, w drugą wolno jechać. Przy okazji krańcówka koryguje saldo czasu, więc szacowany kąt sam się kalibruje. Krańcówka L (GPIO 16) zawsze chroni ruch w LEWO, R (GPIO 17) ruch w PRAWO. "Zamień lewo / prawo" (`yawInvert`) odwraca silnik, ale nie zamienia krańcówek: jeśli po przełączeniu gondola jedzie w stronę drugiej krańcówki, zamień też ich przewody. Firmware to wykrywa: gdy krańcówka zamknie się, kiedy gondola od niej odjeżdża, albo nie otworzy się po ruszeniu z niej, gondola staje, w logu jest "Krańcówka po złej stronie", panel pokazuje BŁĄD KRAŃCÓWEK i oba kierunki są zablokowane do zmiany `yawInvert` (albo ręcznego zdjęcia gondoli z krańcówki).
+**Krańcówki**: dwa styki zwierane do masy na GPIO 16 i 17. Dotknięcie krańcówki od razu zatrzymuje ruch w tę stronę, w drugą wolno jechać. Przy okazji krańcówka koryguje saldo czasu, więc szacowany kąt sam się kalibruje. Krańcówka L (GPIO 16) zawsze chroni ruch w lewo (LEFT), R (GPIO 17) ruch w prawo (RIGHT). "Swap left / right" (`yawInvert`) odwraca silnik, ale nie zamienia krańcówek: jeśli po przełączeniu gondola jedzie w stronę drugiej krańcówki, zamień też ich przewody. Firmware to wykrywa: gdy krańcówka zamknie się, kiedy gondola od niej odjeżdża, albo nie otworzy się po ruszeniu z niej, gondola staje, w logu jest "Endstop on the wrong side", panel pokazuje ENDSTOP FAULT i oba kierunki są zablokowane do zmiany `yawInvert` (albo ręcznego zdjęcia gondoli z krańcówki).
 
-**AS5600**: prawdziwy kąt co 50 ms, limit skrętu w stopniach (`yawMaxDeg`, w panelu widoczny od razu) i "jedź do kąta" (krótszą drogą, zwalnia do 30 % na ostatnich 10 stopniach, kończy w oknie ±2 stopnie, najwyżej 10 s). Limit w sekundach (`yawMaxBal`) jest wtedy zapasowy: działa, gdy limit w stopniach to 0 albo czujnik nie odczytuje. Przy braku magnesu firmware zgłasza błąd i wraca do zachowania jak bez czujnika. Jeśli kąt rośnie w złą stronę, włącz `yawSensRev`. Liczba pełnych obrotów jest zapisywana w pamięci (przy szybkim obrocie co najmniej co 90 stopni), więc przeżywa restart. Reset w trakcie ruchu przez zawieszenie programu (watchdog) może ją jednak zgubić: gdy wskaźnik skrętu pokazuje bzdury, ustaw gondolę prosto i naciśnij ZERUJ POZYCJĘ.
+**AS5600**: prawdziwy kąt co 50 ms, limit skrętu w stopniach (`yawMaxDeg`, w panelu widoczny od razu) i jazda do kąta, w panelu GO TO ANGLE (krótszą drogą, zwalnia do 30 % na ostatnich 10 stopniach, kończy w oknie ±2 stopnie, najwyżej 10 s). Limit w sekundach (`yawMaxBal`) jest wtedy zapasowy: działa, gdy limit w stopniach to 0 albo czujnik nie odczytuje. Przy braku magnesu firmware zgłasza błąd i wraca do zachowania jak bez czujnika. Jeśli kąt rośnie w złą stronę, włącz `yawSensRev`. Liczba pełnych obrotów jest zapisywana w pamięci (przy szybkim obrocie co najmniej co 90 stopni), więc przeżywa restart. Reset w trakcie ruchu przez zawieszenie programu (watchdog) może ją jednak zgubić: gdy wskaźnik skrętu pokazuje bzdury, ustaw gondolę prosto i naciśnij ZERO POSITION.
 
 ## Sterowanie przez Bluetooth
 
 Web Bluetooth w Chrome działa tylko na stronach HTTPS, a ESP serwuje panel po zwykłym HTTP. Dlatego są dwie drogi:
 
-1. **Kopia panelu na GitHub Pages** (polecane). W ustawieniach repozytorium: Settings, Pages, Source: GitHub Actions. Workflow `.github/workflows/pages.yml` publikuje katalog `data/` przy każdym pushu na domyślną gałąź `main`; można go też uruchomić ręcznie (Actions, pages, Run workflow, czyli `workflow_dispatch`). Panel będzie pod adresem w rodzaju `https://<login>.github.io/<repozytorium>/`. Otwórz go raz z internetem, potem zostaje w pamięci telefonu i działa też bez sieci. Z HTTPS panel od razu proponuje "Połącz BLE".
+1. **Kopia panelu na GitHub Pages** (polecane). W ustawieniach repozytorium: Settings, Pages, Source: GitHub Actions. Workflow `.github/workflows/pages.yml` publikuje katalog `data/` przy każdym pushu na domyślną gałąź `main`; można go też uruchomić ręcznie (Actions, pages, Run workflow, czyli `workflow_dispatch`). Panel będzie pod adresem w rodzaju `https://<login>.github.io/<repozytorium>/`. Otwórz go raz z internetem, potem zostaje w pamięci telefonu i działa też bez sieci. Z HTTPS panel od razu proponuje "CONNECT BLE".
 2. **Flaga w Chrome.** Wpisz `chrome://flags/#unsafely-treat-insecure-origin-as-secure`, dodaj `http://192.168.4.1`, uruchom Chrome ponownie. Wtedy przycisk BLE pojawi się też w panelu z ESP.
 
 Domyślnie (`bleMode` 1) ESP ogłasza się po BLE tylko wtedy, gdy nikt nie jest podłączony do jego WiFi, bo oba radia naraz zjadają baterię i psują opóźnienia. Przed połączeniem BLE odłącz więc telefon od sieci `Turbina-XXXX` albo ustaw `bleMode` na 2. iPhone nie ma Web Bluetooth w żadnej przeglądarce, tam zostaje WiFi. Po BLE sterujesz silnikami i widzisz telemetrię; ustawienia zmienia się przez WiFi (ramka konfiguracji nie mieści się w pakiecie BLE), a log pokazuje tylko najnowsze wpisy.
 
 ## Aktualizacja bez kabla (OTA)
 
-W panelu: Konfiguracja, System, Aktualizacja OTA. Wybierasz plik i rodzaj:
+W panelu: zębatka (SETTINGS), SYSTEM, FIRMWARE UPDATE (OTA). Wybierasz plik i rodzaj:
 
-- firmware: `.pio/build/esp32dev/firmware.bin`,
-- system plików (panel): `.pio/build/esp32dev/littlefs.bin`, powstaje po `pio run -e esp32dev -t buildfs`.
+- FIRMWARE: `.pio/build/esp32dev/firmware.bin`,
+- FILESYSTEM (panel): `.pio/build/esp32dev/littlefs.bin`, powstaje po `pio run -e esp32dev -t buildfs`.
 
 Hasło to hasło sieci WiFi (użytkownik `admin`), to, z którym sieć faktycznie działa: nowe hasło zapisane w panelu obowiązuje także dla OTA dopiero po restarcie. Silniki muszą stać, inaczej ESP odmówi. Plik niepasujący do wybranego rodzaju (firmware jako system plików albo odwrotnie) jest odrzucany od razu, bez blokowania silników. W trakcie wgrywania wszystkie komendy ruchu są blokowane, a po zakończeniu ESP sam się restartuje. Adres `http://192.168.4.1/update` przekierowuje do tej sekcji panelu. Gotowe pliki z każdego builda można też pobrać z zakładki Actions na GitHubie (artefakt `firmware`).
 
@@ -173,12 +174,12 @@ Zabezpieczenia są nadrzędne wobec komend. Po każdym zadziałaniu nastawy są 
 - Ten telefon się rozłączył albo odszedł ostatni klient: to samo, natychmiast. Komenda ruchu, która przyszła od telefonu tuż przed jego rozłączeniem, już niczego nie uruchomi.
 - Gondola rusza tylko na przytrzymanie. Panel powtarza "trzymam" co 200 ms, a gdy przestanie, gondola staje najpóźniej po 0,7 s, nawet jeśli połączenie dalej żyje.
 - Bateria spadła poniżej progu krytycznego: wszystko staje od razu i start jest zablokowany. Blokada puszcza dopiero, gdy napięcie wzrośnie o 0,3 V ponad próg, czyli praktycznie po wymianie baterii. Odczyt poniżej 2,5 V traktujemy jako brak baterii (praca z USB na biurku), ale to nigdy nie zdejmuje blokady.
-- Przycisk STOP WSZYSTKO zatrzymuje oba silniki bez rampy. Nie blokuje niczego, następna komenda działa normalnie. W trybie HTTP START wysłany przed STOP-em i spóźniony w sieci jest odrzucany.
+- Przycisk EMERGENCY STOP zatrzymuje oba silniki bez rampy. Nie blokuje niczego, następna komenda działa normalnie. W trybie HTTP START wysłany przed STOP-em i spóźniony w sieci jest odrzucany.
 - Rotor pracuje dłużej niż `rotorMaxRun` (jeśli ustawione): zwalnia do zera, panel pokazuje ostrzeżenie.
 - W trakcie OTA silniki są zablokowane aż do restartu.
 - Pętla programu zawiesi się na 5 s: watchdog resetuje ESP. Piny silników idą w stan LOW jako pierwsza rzecz po starcie, zanim ruszy WiFi.
 
-Każde zadziałanie trafia do logu zdarzeń (panel, sekcja Log zdarzeń) i na konsolę z czasem od startu.
+Każde zadziałanie trafia do logu zdarzeń (panel, sekcja EVENT LOG) i na konsolę z czasem od startu.
 
 ## Odbiór etapów
 
@@ -202,21 +203,21 @@ Checklisty z etapów specyfikacji, z opisem jak sprawdzić każdy punkt na stole
 **Etap 3: WiFi, WebSocket, panel**
 
 - [ ] Telefon łączy się z `Turbina-XXXX`, `http://192.168.4.1` otwiera pełny panel.
-- [ ] START, suwak i HAMUJ sterują rotorem, LEWO i PRAWO gondolą, bateria jest widoczna.
+- [ ] START, suwak i BRAKE sterują rotorem, LEFT i RIGHT gondolą, bateria jest widoczna.
 - [ ] Rotor kręci się, wyłączasz WiFi w telefonie: rotor staje w czasie poniżej sekundy, w logu `fs_timeout` albo `fs_disconnect`.
-- [ ] Trzymasz PRAWO i blokujesz ekran telefonu: gondola staje.
+- [ ] Trzymasz RIGHT i blokujesz ekran telefonu: gondola staje.
 - [ ] Pasek statusu pokazuje opóźnienie, przy dobrym zasięgu kilkadziesiąt ms.
 
 **Etap 4: gondola bez czujnika**
 
 - [ ] Kalibracja obrotu zapisuje czas pełnego obrotu, panel pokazuje szacowany kąt.
-- [ ] Po ustawieniu limitu skrętu gondola zatrzymuje się na progu, przycisk w tę stronę jest wyszarzony, pojawia się baner o limicie, w drugą stronę jedzie.
+- [ ] Po ustawieniu limitu skrętu gondola zatrzymuje się na progu, przycisk w tę stronę jest wyszarzony, na pasku alarmów pojawia się TWIST LIMIT, w drugą stronę jedzie.
 - [ ] Restart z panelu: wskaźnik skrętu pokazuje to samo saldo co przed restartem.
-- [ ] ZERUJ POZYCJĘ kasuje saldo.
+- [ ] ZERO POSITION kasuje saldo.
 
 **Etap 5: BLE**
 
-- [ ] Chrome na Androidzie, panel z GitHub Pages, telefon odłączony od WiFi turbiny: Połącz BLE, oba silniki sterowane, telemetria płynie.
+- [ ] Chrome na Androidzie, panel z GitHub Pages, telefon odłączony od WiFi turbiny: CONNECT BLE, oba silniki sterowane, telemetria płynie.
 - [ ] Zerwanie BLE (wyłącz Bluetooth w telefonie) zatrzymuje silniki.
 - [ ] Pobór prądu w spoczynku zmierzony multimetrem szeregowo z baterią: sam AP, AP i reklama BLE, połączenie BLE. Wyniki wpisz do [docs/POBOR_PRADU.md](docs/POBOR_PRADU.md) (jest tam gotowa tabela i opis pomiaru).
 
@@ -230,9 +231,9 @@ Checklisty z etapów specyfikacji, z opisem jak sprawdzić każdy punkt na stole
 **Etap 7: czujnik (gdy dojdzie sprzęt)**
 
 - [ ] Krańcówki: najazd zatrzymuje ruch w tę stronę, w telemetrii zapala się limit, w drugą stronę jedzie od razu.
-- [ ] Krańcówki: po przełączeniu "Zamień lewo / prawo" bez zamiany kabli krańcówek pierwszy najazd kończy się zatrzymaniem i błędem "Krańcówka po złej stronie", a nie jazdą w ogranicznik.
+- [ ] Krańcówki: po przełączeniu "Swap left / right" bez zamiany kabli krańcówek pierwszy najazd kończy się zatrzymaniem i błędem "Endstop on the wrong side", a nie jazdą w ogranicznik.
 - [ ] AS5600: kąt w panelu zgadza się z kątomierzem z dokładnością ±3 stopnie w kilku położeniach.
-- [ ] "Jedź do kąta" na 90, 180 i 270 stopni kończy w oknie ±2 stopnie.
+- [ ] GO TO ANGLE na 90, 180 i 270 stopni kończy w oknie ±2 stopnie.
 - [ ] Zdjęcie magnesu: błąd w logu, kompas znika albo przechodzi na szacunek, sterowanie ręczne dalej działa.
 
 **Etap 8: ESP32-S3**
@@ -243,6 +244,7 @@ Checklisty z etapów specyfikacji, z opisem jak sprawdzić każdy punkt na stole
 
 ## Odstępstwa od specyfikacji
 
+- **Interfejs po angielsku.** Specyfikacja zakładała polski interfejs, ale na prośbę właściciela panel jest po angielsku. Nazwa urządzenia zostaje `Turbina-XXXX` (sieć WiFi i BLE), dokumentacja jest po polsku.
 - **OTA bez ElegantOTA.** ElegantOTA jest na licencji AGPL, ciągnie starszy fork AsyncWebServer i ma własny wygląd. Zamiast tego jest wbudowany upload firmware i systemu plików w panelu, z hasłem AP, paskiem postępu i odmową przy pracujących silnikach.
 - **Czysta logika w `lib/turbine_core/`.** Parser komend, rampa, failsafe, progi baterii i logika gondoli nie zależą od Arduino, więc `pio test -e native` testuje je na komputerze. Moduły w `src/` mają nazwy i role ze specyfikacji.
 - **Dodatkowe moduły w `src/`**: `settings`, `cmd_queue`, `event_log`, `status_led`, `serial_console`, `shared_state` i `app.h`. Bez nich `main.cpp` przestałby być samą sklejką.
@@ -261,13 +263,13 @@ Checklisty z etapów specyfikacji, z opisem jak sprawdzić każdy punkt na stole
 
 **Silnik piszczy.** PWM powinien chodzić na 20 kHz (`MOTOR_PWM_FREQ_HZ` w `config.h`), czyli poza zakresem słuchu. Jeśli piszczy mimo to, sprawdź, czy wgrany jest aktualny firmware. Ciche buczenie przy bardzo małej prędkości to zwykle silnik, który jeszcze nie ruszył; podnieś `rotorMin`.
 
-**Napięcie baterii za niskie albo skacze.** Skalibruj `batCal` multimetrem (Konfiguracja, Bateria) i sprawdź, czy przy GPIO 34 jest kondensator 100 nF do masy. Dzielnik ma dużą rezystancję i bez kondensatora ADC łapie zakłócenia od silników.
+**Napięcie baterii za niskie albo skacze.** Skalibruj `batCal` multimetrem (SETTINGS, BATTERY) i sprawdź, czy przy GPIO 34 jest kondensator 100 nF do masy. Dzielnik ma dużą rezystancję i bez kondensatora ADC łapie zakłócenia od silników.
 
 **Telefon odłącza się od sieci turbiny.** Telefon widzi sieć bez internetu i ucieka na dane komórkowe. Na pytanie o pozostanie w sieci odpowiedz tak, wyłącz dane komórkowe albo funkcję typu "inteligentne przełączanie sieci". Pomaga też włączenie captive portalu (`captive` w ustawieniach sieci, po restarcie): telefon traktuje wtedy panel jak stronę logowania.
 
 **Pod 192.168.4.1 jest tylko strona z formularzem.** Panel nie został wgrany. Zrób `pio run -e esp32dev -t uploadfs` albo wgraj `littlefs.bin` przez ten formularz.
 
-**Brak przycisku Połącz BLE.** Panel otwarty z `http://` nie widzi Bluetootha. Użyj kopii z GitHub Pages albo flagi Chrome opisanej wyżej.
+**Brak przycisku CONNECT BLE.** Panel otwarty z `http://` nie widzi Bluetootha. Użyj kopii z GitHub Pages albo flagi Chrome opisanej wyżej.
 
 ## Praca nad kodem
 
