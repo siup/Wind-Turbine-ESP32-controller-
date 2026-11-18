@@ -7,15 +7,22 @@
 # Content-Encoding: gzip when /<file> is requested. PROJECT_DATA_DIR is then
 # pointed at .pio/webfs, so `pio run -t buildfs / uploadfs` packs that folder.
 #
+# index.html is slimmed first: newlines inside <style> go, and inside the
+# inline <script> leading indentation and whole-line // comments are dropped
+# and a line ending in ; { or , is joined with the next one (no // on it).
+# None of that changes what the code does. The source stays readable; the
+# budget applies to what ships.
+#
 # Runs before every build, so it is incremental: a file is rewritten only when
 # its content changes (deterministic gzip), stale outputs are removed. The
-# build fails if data/index.html is larger than the panel budget.
+# build fails if the slimmed index.html or data/viz.js is over its budget.
 import gzip
 import os
 
 Import("env")  # noqa: F821  (provided by PlatformIO / SCons)
 
-INDEX_LIMIT = 61440  # bytes, data/index.html before gzip (spec: 60 kB)
+INDEX_LIMIT = 61440  # bytes, slimmed index.html before gzip (spec: 60 kB)
+VIZ_LIMIT = 24576    # bytes, data/viz.js (3D view, loaded on demand) before gzip
 GZIP_EXT = (".html", ".htm", ".js", ".css", ".json", ".svg", ".webmanifest", ".txt", ".map")
 
 
@@ -33,6 +40,59 @@ def _write_if_changed(path, data):
     return True
 
 
+def slim_html(data):
+    """Slim the inline <style> and <script> blocks of the panel.
+
+    Lines inside a multi-line template literal are left alone (odd number of
+    backticks seen so far), so their text never changes. Joining a line that
+    ends in ; { or , with the next is safe: no semicolon insertion happens
+    there. A line with // anywhere (URL in a string, trailing comment) is
+    never joined.
+    """
+    text = data.decode("utf-8")
+    out = []
+    mode = ""  # "", "style" or "script"
+    in_tpl = False
+    glue = False  # previous script line may take the next one on the same line
+    for line in text.split("\n"):
+        low = line.lower()
+        if not mode:
+            out.append(line)
+            if "<style" in low and "</style>" not in low:
+                mode = "style"
+            elif "<script" in low and "</script>" not in low and "src=" not in low:
+                mode = "script"
+            glue = False
+            continue
+        if "</" + mode + ">" in low:
+            mode = ""
+            out.append(line)
+            continue
+        if mode == "style":
+            s = line.strip()
+            if glue and s:
+                out[-1] += ("" if out[-1][-1] in "{};," else " ") + s
+            elif s:
+                out.append(s)
+                glue = True
+            continue
+        if in_tpl:
+            out.append(line)
+            glue = False
+        else:
+            s = line.lstrip(" \t")
+            if s.startswith("//") or not s:
+                continue
+            if glue:
+                out[-1] += s
+            else:
+                out.append(s)
+            glue = s[-1] in ";{," and "//" not in s and s.count("`") % 2 == 0
+        if line.count("`") % 2:
+            in_tpl = not in_tpl
+    return "\n".join(out).encode("utf-8")
+
+
 def _gzip(data):
     # mtime=0 and no file name in the header: same input, same bytes.
     return gzip.compress(data, compresslevel=9, mtime=0)
@@ -46,13 +106,18 @@ def build_web(env):
         print("build_web: no data/ folder, web panel skipped")
         return
 
-    index = os.path.join(src, "index.html")
-    if os.path.isfile(index):
-        size = os.path.getsize(index)
-        if size > INDEX_LIMIT:
+    for name, limit, slim in (("index.html", INDEX_LIMIT, True), ("viz.js", VIZ_LIMIT, False)):
+        path = os.path.join(src, name)
+        if not os.path.isfile(path):
+            continue
+        with open(path, "rb") as f:
+            data = f.read()
+        size = len(slim_html(data)) if slim else len(data)
+        if size > limit:
             print("")
-            print("build_web: ERROR data/index.html is %d bytes, the limit is %d bytes." % (size, INDEX_LIMIT))
-            print("build_web: the panel must stay small (one file, served gzipped from LittleFS).")
+            print("build_web: ERROR data/%s is %d bytes%s, the limit is %d bytes."
+                  % (name, size, " after slimming" if slim else "", limit))
+            print("build_web: the panel must stay small (served gzipped from LittleFS).")
             print("")
             env.Exit(1)
 
@@ -69,6 +134,8 @@ def build_web(env):
             rel = os.path.relpath(path, src)
             with open(path, "rb") as f:
                 data = f.read()
+            if rel == "index.html":
+                data = slim_html(data)
             if name.lower().endswith(GZIP_EXT):
                 rel_out = rel + ".gz"
                 blob = _gzip(data)

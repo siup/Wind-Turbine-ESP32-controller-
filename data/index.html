@@ -24,8 +24,8 @@ b{font-family:var(--m);font-weight:600;font-variant-numeric:tabular-nums}
 .w{max-width:560px;margin:0 auto;padding:0 10px}main{overflow-x:clip}
 small,.lb span,label,.kv{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dm)}
 #sb{position:sticky;top:0;z-index:8;background:#0b0d10;border-bottom:var(--l);padding-top:env(safe-area-inset-top)}
-.sbr{display:grid;grid-template-columns:1.5fr 1fr .85fr 1.1fr;height:54px}
-.sc{display:flex;align-items:center;gap:8px;padding:0 8px;border-left:1px solid var(--bd);position:relative;min-width:0}.sc:first-child{border:0;padding-left:2px}.sc b{display:block;font-size:15px;white-space:nowrap}.sc small{display:block;font-size:10px;text-transform:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sc>div{min-width:0}
+.sbr{display:grid;grid-template-columns:1.45fr 1.15fr 1fr 42px 42px;height:54px}@media (max-width:419px){.sc>.rs{display:none}}.ic{display:grid;place-items:center;padding:0;border:0;border-left:var(--l);background:none;color:var(--dm);font:700 11px var(--m);cursor:pointer}.ic.on{color:var(--am)}
+.sc{display:flex;align-items:center;gap:8px;padding:0 8px;border-left:1px solid var(--bd);position:relative;min-width:0}.sc:first-child{border:0;padding-left:2px}.sc b{display:block;font-size:15px;white-space:nowrap}.sc small{display:block;font-size:10px;text-transform:none;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sc>div{min-width:0}
 .led{flex:none;width:10px;height:10px;border-radius:50%;background:#3a4049;box-shadow:inset 0 0 0 1px #0007}.led.g{--c:var(--ok)}.led.a{--c:var(--am)}.led.r{--c:var(--al)}.led.c{--c:var(--in)}.led[class*=" "]{background:var(--c);box-shadow:0 0 7px var(--c)}
 .bl{animation:bl 1s steps(2,start) infinite}
 @keyframes bl{50%{opacity:.2}}
@@ -95,7 +95,7 @@ body.stl :is(.pb b,.chip,.gg,.cb){opacity:.45}
 input:not([type=range]):not([type=file]),select{width:100%;min-width:0;height:56px;padding:0 12px;background:var(--k);border:var(--l);border-radius:3px;font-size:17px}input:focus,select:focus{outline:none;border-color:var(--am)}
 select{-webkit-appearance:none;appearance:none;font-family:var(--m);background:conic-gradient(from -45deg at 50% 100%,var(--dm) 90deg,#0000 0) right 14px center/12px 6px no-repeat var(--k)}
 input[type=file]{width:100%;padding:12px 0;color:var(--dm);font-size:13px}input[type=file]::file-selector-button{height:56px;margin-right:12px;padding:0 14px;border:1px solid #353b45;border-radius:3px;background:var(--b2);color:var(--tx);font:600 13px var(--m);letter-spacing:.08em}
-.st0{margin:20px 2px 8px;font:600 12px var(--m);letter-spacing:.2em;color:var(--dm);display:flex;align-items:center;gap:10px}.st0::after{content:"";flex:1;height:1px;background:var(--bd)}
+.sph{display:flex;align-items:center;gap:14px;margin:8px 0;font:600 12px var(--m);letter-spacing:.2em;color:var(--dm)}.sph .b{padding:0 16px}#vz{position:relative;margin:8px 0}#vz canvas{display:block;width:100%;height:100%;touch-action:none}
 summary{list-style:none;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 14px;font:600 13px var(--m);letter-spacing:.14em;cursor:pointer}summary::-webkit-details-marker{display:none}summary b{color:var(--am)}summary::after{content:"";width:8px;height:8px;border:solid var(--dm);border-width:0 2px 2px 0;transform:rotate(45deg);transition:transform .15s}
 [open]>summary{border-bottom:var(--l)}[open]>summary::after{transform:rotate(-135deg)}
 fieldset{border:0;margin:0;padding:0;min-width:0}fieldset:disabled .f,fieldset:disabled .row{opacity:.4}fieldset:disabled::before{content:var(--nc);display:block;color:var(--am);font:600 12px var(--m);letter-spacing:.08em;margin-bottom:10px}
@@ -126,9 +126,9 @@ dd{margin:0;font-family:var(--m);overflow-wrap:anywhere}
 <body>
 <header id=sb><div class="w sbr">
 <div class=sc><i class="led r bl" id=lL></i><div><b id=lT>OFFLINE</b><small id=sN>TURBINE</small></div></div>
-<div class=sc><span class=rs id=rB><i></i><i></i><i></i><i></i></span><div><b id=rV>--</b><small>dBm</small></div></div>
-<div class=sc><div><b id=tV>--</b><small>RTT ms</small></div></div>
+<div class=sc><span class=rs id=rB><i></i><i></i><i></i><i></i></span><div><b id=rV>--</b><small>dBm · <span id=tV>--</span> ms</small></div></div>
 <div class=sc><div><b id=bV>--</b><small id=bM>BATTERY</small></div><span class=bb id=bB><i id=bF></i></span></div>
+<button class=ic id=vwB aria-label=View>3D</button><button class=ic id=stB aria-label=Settings><svg width=22 viewBox="0 0 24 24" fill=none stroke=currentColor><circle cx=12 cy=12 r=7.5 stroke-width=4 stroke-dasharray="2.95 2.94"/><circle cx=12 cy=12 r=4 stroke-width=2.4 /></svg></button>
 </div><button id=as><span class=w><i class="led g" id=aL></i><b id=aH>SYSTEM OK</b><span id=aM></span><b id=aN></b>▾</span></button></header>
 <main class=w>
 <section class=pn id=bc hidden>
@@ -137,7 +137,7 @@ dd{margin:0;font-family:var(--m);overflow-wrap:anywhere}
 <button class="b big go wide" data-a=ble id=bcB>CONNECT BLE</button>
 <p class=nt id=bcN>Bluetooth mode. To control over WiFi, join the Turbina-XXXX network and open http://192.168.4.1.</p>
 </div></section>
-<section class=pn id=pR>
+<div id=cv><section class=pn id=pR>
 <div class=ph><span><b>M1</b> · ROTOR</span><span class=chip id=rC>STOPPED</span></div>
 <div class=pb>
 <div class=rt><div class=gg><svg viewBox="8 8 224 170" aria-label="Rotor speed">
@@ -176,7 +176,8 @@ dd{margin:0;font-family:var(--m);overflow-wrap:anywhere}
 <div class=gto><input id=gIn inputmode=decimal placeholder=0..359°><button class=b id=gGo style="grid-column:span 2">GO</button>
 <button class=b data-g=0>0°</button><button class=b data-g=90>90°</button><button class=b data-g=180>180°</button><button class=b data-g=270>270°</button></div></div>
 </div></section>
-<div class=st0>SETTINGS</div>
+</div><div id=vz hidden></div>
+<div id=sp hidden><div class=sph><button class=b id=spX>◀ BACK</button>SETTINGS</div>
 <details class=pn id=dR><summary><span><b>S1</b> · ROTOR</span></summary><fieldset class=pb data-c><div data-f=R></div></fieldset></details>
 <details class=pn id=dY><summary><span><b>S2</b> · NACELLE</span></summary><fieldset class=pb data-c><div data-f=Y></div>
 <div class=box id=cw><div class=h3>ROTATION CALIBRATION</div>
@@ -218,7 +219,7 @@ dd{margin:0;font-family:var(--m);overflow-wrap:anywhere}
 <div class="f bo" id=wkB hidden><label>Keep screen on</label><button class=tg data-a=pf data-v=wake id=pf_wake></button></div>
 <div class=box><div class=h3>BLUETOOTH</div><div id=bP></div></div>
 <p class=nt id=pV></p>
-</div></details>
+</div></details></div>
 </main>
 <div id=ao hidden role=dialog aria-label=Alarms><div class=w><div id=bn></div><button class="b wide">CLOSE</button></div></div>
 <div id=ts class=w></div>
@@ -760,7 +761,7 @@ on(D,'click',e=>{
  }
 });
 const ao=$('ao'),aoT=v=>{A(ao,'hidden',!v);A($('as'),'aria-expanded',''+!!v);if(v)V(ao,'padding-top',$('sb').offsetHeight+'px')};
-on($('sb'),'click',()=>aoT(ao.hidden));
+on($('sb'),'click',e=>{if(!e.target.closest('.ic'))aoT(ao.hidden)});
 on(ao,'click',e=>{if(!e.target.closest('#bn'))aoT(0)});
 for(const id of['dL','dS'])$(id).addEventListener('toggle',e=>{if(e.target.open){send({t:id=='dL'?'log':'info'});logDraw()}});
 
@@ -950,6 +951,34 @@ if(HTTPS){
 }
 prefDraw();spDraw();ysDraw();infoDraw();
 if(location.hash=='#ota'){$('dS').open=true;setTimeout(()=>$('ota').scrollIntoView(),50)}
+// views: control panel (c) or 3D (v, viz.js loaded on first use); the
+// settings page is #set in the URL, so the phone's back button closes it
+let vw=P.vw=='v'?'v':'c',vzL=0,spIn=0;
+const isSet=()=>/^#(set|ota)$/.test(location.hash);
+function vzLoad(){
+ if(vzL)return;
+ vzL=1;
+ const s=D.createElement('script');
+ s.src='viz.js';
+ s.onerror=()=>{vzL=0;vw='c';vwDraw();toast('3D view not available','w')};
+ D.head.append(s);
+}
+function vwDraw(){
+ const s=isSet(),v=vw=='v'&&!s;
+ A($('cv'),'hidden',s||v);A($('vz'),'hidden',!v);A($('sp'),'hidden',!s);
+ T($('vwB'),vw=='v'?'PANEL':'3D');K($('stB'),'on',s);
+ if(v&&!window.VZ)vzLoad();
+ if(window.VZ)VZ.on(v);
+}
+function spClose(){
+ if(spIn){spIn=0;history.back()}
+ else{history.replaceState(null,'',location.pathname+location.search);vwDraw()}
+}
+on($('stB'),'click',()=>{aoT(0);if(isSet())spClose();else{yAbort();spIn=1;location.hash='set'}});
+on($('spX'),'click',spClose);
+on($('vwB'),'click',()=>{aoT(0);yAbort();vw=vw=='v'?'c':'v';P.vw=vw;saveP();if(isSet())spClose();else vwDraw()});
+on(window,'hashchange',()=>{aoT(0);if(!isSet())spIn=0;vwDraw();scrollTo(0,0)});
+vwDraw();
 wake();
 on(window,'pageshow',()=>{if(WSON&&!ws)wsOpen()});
 if(WSON)wsOpen();
