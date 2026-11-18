@@ -2,7 +2,7 @@
 // index.html registers it only when the page is served over https:, never
 // from the ESP (http://192.168.4.1). Network first for the page itself so a
 // new panel version shows up at once; cache first for the static assets.
-const CACHE = 'turbina-v1';
+const CACHE = 'turbina-v2';
 const ASSETS = ['./', 'index.html', 'manifest.json', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => {

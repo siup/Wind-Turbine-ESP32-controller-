@@ -51,18 +51,18 @@ const char kHoldLeftFrame[] = "{\"t\":\"yaw\",\"hold\":\"left\",\"id\":" KA_ID_S
 const char kHoldRightFrame[] = "{\"t\":\"yaw\",\"hold\":\"right\",\"id\":" KA_ID_STR "}";
 
 const char* const kHelp[] = {
-    "# Konsola turbiny, komendy:",
-    "#   r<0-100>    rotor, prędkość w % (np. r50)",
-    "#   rb          rotor stop z hamowaniem",
-    "#   yl / yr     yaw w lewo / w prawo (trzymaj: ka on albo powtarzaj)",
+    "# Turbine console, commands:",
+    "#   r<0-100>    rotor speed in % (e.g. r50)",
+    "#   rb          rotor stop with braking",
+    "#   yl / yr     yaw left / right (to hold: ka on, or repeat)",
     "#   ys          yaw stop",
-    "#   s           stop wszystkiego",
-    "#   g<stopnie>  yaw goto (tylko AS5600), np. g135",
-    "#   b           bateria: mV, mV na ADC, %, flagi",
-    "#   tel on|off  telemetria co 500 ms",
-    "#   ka on|off   podtrzymanie: ping + yaw hold co 200 ms",
-    "#   {...}       dowolna ramka JSON protokołu",
-    "#   ?           ta pomoc",
+    "#   s           emergency stop (all motors)",
+    "#   g<degrees>  yaw goto (AS5600 only), e.g. g135",
+    "#   b           battery: mV, mV at ADC, %, flags",
+    "#   tel on|off  telemetry every 500 ms",
+    "#   ka on|off   keepalive: ping + yaw hold every 200 ms",
+    "#   {...}       any protocol JSON frame",
+    "#   ?           this help",
 };
 constexpr size_t kHelpCount = sizeof(kHelp) / sizeof(kHelp[0]);
 
@@ -245,20 +245,20 @@ int onOff(const char* arg) {
 void cmdTel(const char* arg) {
   const int v = onOff(arg);
   if (v < 0) {
-    note("# użycie: tel on|off");
+    note("# usage: tel on|off");
     return;
   }
   if (v < 2) {
     g_tel = v == 1;
     g_telMs = millis() - kTelPeriodMs;  // first frame on the next tick
   }
-  note("# telemetria %s", g_tel ? "włączona" : "wyłączona");
+  note("# telemetry %s", g_tel ? "on" : "off");
 }
 
 void cmdKa(const char* arg) {
   const int v = onOff(arg);
   if (v < 0) {
-    note("# użycie: ka on|off");
+    note("# usage: ka on|off");
     return;
   }
   if (v < 2) {
@@ -266,7 +266,7 @@ void cmdKa(const char* arg) {
     g_kaMs = millis() - kKeepAlivePeriodMs;  // first ping on the next tick
     g_kaErrShown = false;
   }
-  note("# podtrzymanie (ka) %s", g_ka ? "włączone" : "wyłączone");
+  note("# keepalive (ka) %s", g_ka ? "on" : "off");
 }
 
 char* trim(char* s) {
@@ -324,7 +324,7 @@ void handleLine(char* raw) {
     cmdKa(arg);
   } else {
     printErr(proto::Cmd::None, proto::Err::UnknownCmd, nullptr);
-    note("# nieznana komenda, wpisz ? po pomoc");
+    note("# unknown command, type ? for help");
   }
 }
 
@@ -349,7 +349,7 @@ void readInput() {
     if (c == '\r' || c == '\n') {
       if (g_overflow) {
         printErr(proto::Cmd::None, proto::Err::TooLong, nullptr);
-        note("# linia dłuższa niż %u znaków, pominięta", (unsigned)kLineMax);
+        note("# line longer than %u characters, ignored", (unsigned)kLineMax);
       } else {
         g_line[g_lineLen] = '\0';
         handleLine(g_line);
@@ -400,7 +400,7 @@ void keepAlive(uint32_t nowMs) {
   if (g_holdDir == 0) return;
   if ((uint32_t)(nowMs - g_holdSetMs) >= kHoldMaxMs) {
     clearHold();
-    note("# ka: podtrzymanie yaw zakończone po %lu s, wyślij yl/yr ponownie", (unsigned long)(kHoldMaxMs / 1000));
+    note("# ka: yaw hold ended after %lu s, send yl/yr again", (unsigned long)(kHoldMaxMs / 1000));
     return;
   }
   pushStr(g_holdDir < 0 ? kHoldLeftFrame : kHoldRightFrame);
@@ -425,7 +425,7 @@ void begin() {
   g_ka = false;
   clearHold();
   g_helpIdx = kHelpCount;
-  note("# konsola gotowa, wpisz ? po pomoc");
+  note("# console ready, type ? for help");
 }
 
 void tick(uint32_t nowMs) {
@@ -445,7 +445,7 @@ void print(const char* data, size_t len) {
 void disableKeepAlive() {
   if (!g_ka) return;
   g_ka = false;
-  note("# podtrzymanie (ka) wyłączone: połączył się klient WS/BLE");
+  note("# keepalive (ka) off: a WS/BLE client connected");
 }
 
 }  // namespace SerialConsole

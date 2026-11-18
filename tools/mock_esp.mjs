@@ -2782,11 +2782,11 @@ function send401(req, res) {
   sendRaw(res, 401, 'text/plain', '', { 'WWW-Authenticate': `Basic realm="${OTA_REALM}"` });
 }
 
-const FALLBACK_PAGE = `<!doctype html><html lang="pl"><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>Turbina (mock)</title>
+const FALLBACK_PAGE = `<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Turbine (mock)</title>
 <body style="font:16px system-ui;background:#0f1114;color:#d6d9de;padding:24px">
-<h1 style="font-size:20px">Brak panelu</h1><p>Mock nie znalazł pliku index.html w folderze:</p>
-<pre>${DATA_DIR.replace(/[<>&]/g, '')}</pre><p>API działa: <a style="color:#f2a900" href="/api/state">/api/state</a></p>`;
+<h1 style="font-size:20px">No control panel</h1><p>The mock found no index.html in:</p>
+<pre>${DATA_DIR.replace(/[<>&]/g, '')}</pre><p>API is up: <a style="color:#f2a900" href="/api/state">/api/state</a></p>`;
 
 async function serveStatic(req, res, pathname) {
   let rel;
@@ -2826,7 +2826,7 @@ async function serveStatic(req, res, pathname) {
 }
 
 function notFound(res) {
-  sendRaw(res, 404, 'text/plain', '404: nie ma takiej strony');
+  sendRaw(res, 404, 'text/plain', '404: page not found');
 }
 
 // --- test hooks ---------------------------------------------------------------

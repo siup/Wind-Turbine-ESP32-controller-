@@ -1,8 +1,8 @@
 {
-  "name": "Turbina",
-  "short_name": "Turbina",
-  "description": "Panel sterowania modelem turbiny wiatrowej",
-  "lang": "pl",
+  "name": "Turbine Control",
+  "short_name": "Turbine",
+  "description": "Control panel for a wind turbine model",
+  "lang": "en",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

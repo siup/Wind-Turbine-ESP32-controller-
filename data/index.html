@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pl">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -8,11 +8,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="Turbina">
+<meta name="apple-mobile-web-app-title" content="Turbine">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>Turbina</title>
+<title>Turbine Control</title>
 <style>
 :root{--l:1px solid #2a2f37;--tb:repeating-linear-gradient(90deg,#c9ced5 0 3px,#8d949d 3px 5px) 50% 50%/11px 22px no-repeat,#c9ced5;--bg:#0f1114;--pn:#171a1f;--bd:#2a2f37;--tx:#d7dce2;--dm:#7d8590;--am:#f2a900;--ok:#3ddc84;--al:#ff3b30;--in:#4cc9f0;--k:#0b0d10;--b2:#1e232a;--m:ui-monospace,"SF Mono","Roboto Mono","DejaVu Sans Mono",Menlo,Consolas,monospace;--hz:repeating-linear-gradient(-45deg,#f2c200 0 9px,#121417 9px 18px);--ht:repeating-linear-gradient(-45deg,#ff3b3070 0 3px,transparent 3px 7px)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -209,115 +209,115 @@ dd{margin:0;font-family:var(--m);word-break:break-all}
 </head>
 <body>
 <header id=sb><div class="w sbr">
-<div class=sc><i class="led r bl" id=lL></i><div><b id=lT>OFFLINE</b><small id=sN>TURBINA</small></div></div>
+<div class=sc><i class="led r bl" id=lL></i><div><b id=lT>OFFLINE</b><small id=sN>TURBINE</small></div></div>
 <div class=sc><span class=rs id=rB><i></i><i></i><i></i><i></i></span><div><b id=rV>--</b><small>dBm</small></div></div>
 <div class=sc><div><b id=tV>--</b><small>RTT ms</small></div></div>
-<div class=sc><div><b id=bV>--</b><small id=bM>BATERIA</small></div><span class=bb id=bB><i id=bF></i></span></div>
+<div class=sc><div><b id=bV>--</b><small id=bM>BATTERY</small></div><span class=bb id=bB><i id=bF></i></span></div>
 </div></header>
 <main class=w>
 <div id=bn></div>
 <section class=pn id=bc hidden>
-<div class=ph><span><b>BLE</b> · POŁĄCZENIE</span><i class=led id=bcL></i></div>
+<div class=ph><span><b>BLE</b> · CONNECTION</span><i class=led id=bcL></i></div>
 <div class=pb>
-<button class="b big go wide" data-a=ble id=bcB>POŁĄCZ BLE</button>
-<p class=nt id=bcN>Tryb Bluetooth. Sterowanie przez WiFi: połącz telefon z siecią Turbina-XXXX i otwórz http://192.168.4.1.</p>
+<button class="b big go wide" data-a=ble id=bcB>CONNECT BLE</button>
+<p class=nt id=bcN>Bluetooth mode. To control over WiFi, join the Turbina-XXXX network and open http://192.168.4.1.</p>
 </div></section>
 <section class=pn id=pR>
-<div class=ph><span><b>M1</b> · ROTOR</span><span class=chip id=rC>STOP</span></div>
+<div class=ph><span><b>M1</b> · ROTOR</span><span class=chip id=rC>STOPPED</span></div>
 <div class=pb>
-<div class=gg><svg viewBox="0 0 240 180" aria-label="Prędkość rotora">
+<div class=gg><svg viewBox="0 0 240 180" aria-label="Rotor speed">
 <defs><pattern id=hp width=6 height=6 patternUnits=userSpaceOnUse patternTransform=rotate(45)><rect width=3 height=6 fill=#ff3b30 fill-opacity=".6"/></pattern></defs>
 <path class=gb id="gB"/><path class=gh id="gH"/><path class=gf id=gF pathLength="100"/>
 <g id=gK></g>
 <g class=gm id=gM><path d="M120 22l-7-12h14z"/></g>
 <g class=gn id=gN><path d="M116.5 54L120 22l3.5 32z"/></g>
 <text class=gv x=120 y=134><tspan id=gV>--</tspan><tspan dx=2>%</tspan></text>
-<text class=gt x=120 y=158 id=gT>CEL --%</text>
+<text class=gt x=120 y=158 id=gT>TARGET --%</text>
 </svg></div>
-<div class=kv><span>CZAS PRACY <b id=rRun>--:--</b></span><span id=rRw>POZOSTAŁO <b id=rRem>--:--</b></span></div>
+<div class=kv><span>RUN TIME <b id=rRun>--:--</b></span><span id=rRw>REMAINING <b id=rRem>--:--</b></span></div>
 <div class=why id=rW></div>
-<div class=row><button class="b big go" id=rBtn style=flex:3>▶ START</button><button class=b id=rBrk style=flex:1>HAMUJ</button></div>
-<div class=lb><span>NASTAWA PRĘDKOŚCI</span><b id=spV>--%</b></div>
-<div class=sr><button class=b id=rM5>−5</button><div class=rg id=rgR><div class=tk><i class=hz></i><i class=fl></i></div><input type=range id=rS min=0 max=100 step=1 value=30 aria-label="Nastawa prędkości rotora"></div><button class=b id=rP5>+5</button></div>
+<div class=row><button class="b big go" id=rBtn style=flex:3>▶ START</button><button class=b id=rBrk style=flex:1>BRAKE</button></div>
+<div class=lb><span>SPEED SETPOINT</span><b id=spV>--%</b></div>
+<div class=sr><button class=b id=rM5>−5</button><div class=rg id=rgR><div class=tk><i class=hz></i><i class=fl></i></div><input type=range id=rS min=0 max=100 step=1 value=30 aria-label="Rotor speed setpoint"></div><button class=b id=rP5>+5</button></div>
 <div class=ps id=rPs><button class=b data-p=25>25</button><button class=b data-p=50>50</button><button class=b data-p=75>75</button><button class=b data-p=100>100</button></div>
 </div></section>
 <section class=pn id=pY>
-<div class=ph><span><b>M2</b> · GONDOLA</span><span class=chip id=yC>STOI</span></div>
+<div class=ph><span><b>M2</b> · NACELLE</span><span class=chip id=yC>IDLE</span></div>
 <div class=pb>
 <div class=yt>
-<div class=cp id=cP hidden><svg viewBox="0 0 160 160" id=cS aria-label="Kompas gondoli">
+<div class=cp id=cP hidden><svg viewBox="0 0 160 160" id=cS aria-label="Nacelle compass">
 <circle class=cr cx=80 cy=80 r="66"/><g id=cK></g>
 <g class=cg id=cG><path d="M80 15l-6-11h12z"/></g>
 <g class=cn id=cN><path d="M80 24l7 56H73z"/><path class=t d="M73 80h14l-7 26z"/></g>
 <circle class=gc cx=80 cy=80 r="5"/>
 </svg></div>
 <div class=di id=dI><i>◀</i><i>◀</i><i>◀</i><b>■</b><i>▶</i><i>▶</i><i>▶</i></div>
-<div class=yr><b id=yA>--</b><small id=yS>CZUJNIK: --</small><small id=yV></small></div>
+<div class=yr><b id=yA>--</b><small id=yS>SENSOR: --</small><small id=yV></small></div>
 </div>
-<div id=tw><div class=lb><span>SKRĘT PRZEWODÓW</span><b id=twV>--</b></div>
+<div id=tw><div class=lb><span>CABLE TWIST</span><b id=twV>--</b></div>
 <div class=tb><i class=zl></i><i class=zr></i><i class=tf id=twF></i><i class=c0></i></div>
 <div class=tl><span id=twA></span><span>0</span><span id=twB></span></div></div>
 <div class=why id=yW></div>
-<div class=hr><button class="b hb" id=yL>◀ LEWO</button><button class="b hb" id=yR>PRAWO ▶</button></div>
-<div class=lb><span>PRĘDKOŚĆ GONDOLI</span><b id=ysV>60%</b></div>
-<div class=rg id=rgY><div class=tk><i class=fl></i></div><input type=range id=ySl min=20 max=100 step=5 value=60 aria-label="Prędkość gondoli"></div>
-<div id=gt hidden><div class=lb><span>JEDŹ DO KĄTA</span><b id=gtV></b></div>
-<div class=gto><input id=gIn inputmode=decimal placeholder=0..359°><button class=b id=gGo style="grid-column:span 2">JEDŹ</button>
+<div class=hr><button class="b hb" id=yL>◀ LEFT</button><button class="b hb" id=yR>RIGHT ▶</button></div>
+<div class=lb><span>YAW SPEED</span><b id=ysV>60%</b></div>
+<div class=rg id=rgY><div class=tk><i class=fl></i></div><input type=range id=ySl min=20 max=100 step=5 value=60 aria-label="Yaw speed"></div>
+<div id=gt hidden><div class=lb><span>GO TO ANGLE</span><b id=gtV></b></div>
+<div class=gto><input id=gIn inputmode=decimal placeholder=0..359°><button class=b id=gGo style="grid-column:span 2">GO</button>
 <button class=b data-g=0>0°</button><button class=b data-g=90>90°</button><button class=b data-g=180>180°</button><button class=b data-g=270>270°</button></div></div>
 </div></section>
-<div class=st0>KONFIGURACJA</div>
+<div class=st0>SETTINGS</div>
 <details class=pn id=dR><summary><span><b>S1</b> · ROTOR</span></summary><fieldset class=pb data-c><div data-f=R></div></fieldset></details>
-<details class=pn id=dY><summary><span><b>S2</b> · GONDOLA</span></summary><fieldset class=pb data-c><div data-f=Y></div>
-<div class=box id=cw><div class=h3>KALIBRACJA OBROTU</div>
-<ol><li>Ustaw gondolę na znaczniku.<li>Naciśnij START POMIARU.<li>Przyciskami LEWO / PRAWO obróć gondolę dokładnie o jeden pełny obrót.<li>Naciśnij ZAKOŃCZ. Czas obrotu zapisze się sam.</ol>
-<div class=row id=cw0><button class=b data-a=cal data-v=start>START POMIARU</button></div>
-<div class=row id=cw1 hidden><button class="b go" data-a=cal data-v=stop>ZAKOŃCZ</button><button class=b data-a=cal data-v=cancel>ANULUJ</button></div>
-<div class=kv style="margin:10px 0 0"><span>CZAS OBROTU (PRZY 100 %)</span><b id=cwR>--</b></div></div>
-<p class=nt>Zerowanie: ustaw gondolę ręcznie prosto (przewody nieskręcone), potem zeruj. Kasuje saldo skrętu.</p>
-<div class=row><button class="b dg" data-a=zero data-c>ZERUJ POZYCJĘ</button></div>
+<details class=pn id=dY><summary><span><b>S2</b> · NACELLE</span></summary><fieldset class=pb data-c><div data-f=Y></div>
+<div class=box id=cw><div class=h3>ROTATION CALIBRATION</div>
+<ol><li>Line the nacelle up with the mark.<li>Press START MEASUREMENT.<li>Use LEFT / RIGHT to turn the nacelle exactly one full turn.<li>Press FINISH. The turn time is saved automatically.</ol>
+<div class=row id=cw0><button class=b data-a=cal data-v=start>START MEASUREMENT</button></div>
+<div class=row id=cw1 hidden><button class="b go" data-a=cal data-v=stop>FINISH</button><button class=b data-a=cal data-v=cancel>CANCEL</button></div>
+<div class=kv style="margin:10px 0 0"><span>FULL TURN TIME (AT 100%)</span><b id=cwR>--</b></div></div>
+<p class=nt>Set the nacelle straight by hand (cables untwisted), then press ZERO POSITION. This resets the cable twist to 0.</p>
+<div class=row><button class="b dg" data-a=zero data-c>ZERO POSITION</button></div>
 </fieldset></details>
-<details class=pn id=dB><summary><span><b>S3</b> · BATERIA</span></summary><fieldset class=pb data-c>
-<div class=kv><span>POMIAR <b id=bxV>--</b></span><span>STAN <b id=bxS>--</b></span></div>
-<label>Typ baterii (progi)</label>
-<div class=seg id=bT style=margin-top:5px><button class=b data-a=bt data-v=0>9V</button><button class=b data-a=bt data-v=1>2S LI-ION</button><button class=b data-a=bt data-v=2>WŁASNE</button></div>
-<div class=box><div class=h3>KALIBRACJA MULTIMETREM</div><p class=nt>Zmierz napięcie baterii multimetrem i wpisz wynik. Panel przeliczy współczynnik kalibracji.</p>
-<div class=nr><input id=bMs inputmode=decimal placeholder="np. 8,12"><span class=u>V</span><button class="b t" data-a=bcal>KALIBRUJ</button></div><div class=fe id=bMe></div></div>
+<details class=pn id=dB><summary><span><b>S3</b> · BATTERY</span></summary><fieldset class=pb data-c>
+<div class=kv><span>READING <b id=bxV>--</b></span><span>STATUS <b id=bxS>--</b></span></div>
+<label>Battery type (thresholds)</label>
+<div class=seg id=bT style=margin-top:5px><button class=b data-a=bt data-v=0>9V</button><button class=b data-a=bt data-v=1>2S LI-ION</button><button class=b data-a=bt data-v=2>CUSTOM</button></div>
+<div class=box><div class=h3>MULTIMETER CALIBRATION</div><p class=nt>Measure the battery voltage with a multimeter and enter the reading. The panel works out the calibration factor.</p>
+<div class=nr><input id=bMs inputmode=decimal placeholder="e.g. 8.12"><span class=u>V</span><button class="b t" data-a=bcal>CALIBRATE</button></div><div class=fe id=bMe></div></div>
 <div data-f=B></div></fieldset></details>
-<details class=pn id=dN><summary><span><b>S4</b> · SIEĆ</span></summary><fieldset class=pb data-c>
-<p class=nt>Po zmianie nazwy, hasła lub kanału zrestartuj sterownik i połącz telefon z siecią ponownie.</p><div data-f=N></div></fieldset></details>
-<details class=pn id=dF><summary><span><b>S5</b> · BEZPIECZEŃSTWO</span></summary><fieldset class=pb data-c>
-<p class=nt>Gdy sterujący telefon milczy dłużej niż ten czas, silniki stają. Panel wysyła ramkę co 300 ms.</p><div data-f=F></div></fieldset></details>
+<details class=pn id=dN><summary><span><b>S4</b> · NETWORK</span></summary><fieldset class=pb data-c>
+<p class=nt>After changing the name, password or channel, restart the controller and reconnect the phone to the network.</p><div data-f=N></div></fieldset></details>
+<details class=pn id=dF><summary><span><b>S5</b> · SAFETY</span></summary><fieldset class=pb data-c>
+<p class=nt>The motors stop if the controlling device sends nothing for longer than this. The panel sends a frame every 300 ms.</p><div data-f=F></div></fieldset></details>
 <details class=pn id=dS><summary><span><b>S6</b> · SYSTEM</span></summary><div class=pb>
 <dl id=inf></dl>
 <fieldset data-c><div data-f=S></div></fieldset>
-<div class=box id=ota><div class=h3>AKTUALIZACJA OTA</div><p class=nt>Tylko przez WiFi, silniki muszą stać. Po wgraniu sterownik sam się zrestartuje.</p>
-<div class=seg id=oT><button class="b on" data-a=ot data-v=fw>FIRMWARE</button><button class=b data-a=ot data-v=fs>SYSTEM PLIKÓW</button></div>
+<div class=box id=ota><div class=h3>FIRMWARE UPDATE (OTA)</div><p class=nt>WiFi only, motors must be stopped. The controller restarts by itself after the upload.</p>
+<div class=seg id=oT><button class="b on" data-a=ot data-v=fw>FIRMWARE</button><button class=b data-a=ot data-v=fs>FILESYSTEM</button></div>
 <input type=file id=oF accept=".bin,application/octet-stream">
-<input type=password id=oP placeholder="hasło sieci (AP)" autocomplete=current-password>
-<button class="b wide" data-a=ota id=oG>WGRAJ</button>
+<input type=password id=oP placeholder="Network password (AP)" autocomplete=current-password>
+<button class="b wide" data-a=ota id=oG>UPLOAD</button>
 <div class=pg><i id=oB></i></div><div class=fh id=oM></div></div>
-<div class=row><button class=b data-a=reboot data-c>RESTART</button><button class="b dg" data-a=freset data-c>RESET FABRYCZNY</button></div>
-<button class="b wide" data-a=fsc>PEŁNY EKRAN</button>
+<div class=row><button class=b data-a=reboot data-c>RESTART</button><button class="b dg" data-a=freset data-c>FACTORY RESET</button></div>
+<button class="b wide" data-a=fsc>FULL SCREEN</button>
 </div></details>
-<details class=pn id=dL><summary><span><b>S7</b> · LOG ZDARZEŃ</span></summary><div class=pb>
-<div class=row style=margin:0><button class=b data-a=log>ODŚWIEŻ</button></div><ul class=log id=lg></ul></div></details>
-<details class=pn id=dP><summary><span><b>S8</b> · PANEL</span></summary><div class=pb>
-<div class="f bo"><label>Wibracje</label><button class=tg data-a=pf data-v=vib id=pf_vib></button></div>
-<div class="f bo"><label>Pola zaawansowane</label><button class=tg data-a=pf data-v=adv id=pf_adv></button></div>
-<div class="f bo" id=wkB hidden><label>Nie wygaszaj ekranu</label><button class=tg data-a=pf data-v=wake id=pf_wake></button></div>
+<details class=pn id=dL><summary><span><b>S7</b> · EVENT LOG</span></summary><div class=pb>
+<div class=row style=margin:0><button class=b data-a=log>REFRESH</button></div><ul class=log id=lg></ul></div></details>
+<details class=pn id=dP><summary><span><b>S8</b> · INTERFACE</span></summary><div class=pb>
+<div class="f bo"><label>Vibration</label><button class=tg data-a=pf data-v=vib id=pf_vib></button></div>
+<div class="f bo"><label>Advanced settings</label><button class=tg data-a=pf data-v=adv id=pf_adv></button></div>
+<div class="f bo" id=wkB hidden><label>Keep screen on</label><button class=tg data-a=pf data-v=wake id=pf_wake></button></div>
 <div class=box><div class=h3>BLUETOOTH</div><div id=bP></div></div>
 <p class=nt id=pV></p>
 </div></details>
 </main>
 <div id=ts class=w></div>
-<div id=ef><div class=w><div class=eh><button id=es>STOP WSZYSTKO</button></div></div></div>
+<div id=ef><div class=w><div class=eh><button id=es>EMERGENCY STOP</button></div></div></div>
 <script>
 'use strict';
 const D=document,$=i=>D.getElementById(i),$$=q=>D.querySelectorAll(q),now=()=>performance.now();
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
-const fx=(v,d)=>v.toFixed(d).replace('.',',');
-// decimal comma (type=number drops it in a dot locale)
-const dc=v=>String(v).replace('.',','),pn=v=>parseFloat(String(v).replace(',','.'));
+const fx=(v,d)=>v.toFixed(d);
+// inputs accept a decimal comma or point (type=number would drop the comma)
+const pn=v=>parseFloat(String(v).replace(',','.'));
 const esc=s=>String(s).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';');
 const num=v=>typeof v=='number',J=JSON.stringify;
 const on=(e,n,f,c)=>e.addEventListener(n,f,c);
@@ -335,7 +335,7 @@ const HOST=OV||(location.protocol=='http:'?location.host:'');
 const WSON=!HTTPS&&!!HOST;// WiFi: WS + HTTP
 const HB=OV?'http://'+OV:'';
 const BT=!!navigator.bluetooth;
-const NOBT='Ta przeglądarka nie obsługuje Web Bluetooth (iPhone, Firefox). Użyj Chrome na Androidzie albo trybu WiFi: sieć Turbina-XXXX, adres http://192.168.4.1.';
+const NOBT='This browser does not support Web Bluetooth (iPhone, Firefox). Use Chrome on Android, or WiFi mode: network Turbina-XXXX, address http://192.168.4.1.';
 
 // DOM writes only on change
 function T(e,v){v=v==null?'':''+v;if(e._t!==v){e._t=v;e.textContent=v}}
@@ -344,29 +344,29 @@ function K(e,c,on){on=!!on;const k='_k'+c;if(e[k]!==on){e[k]=on;e.classList.togg
 function V(e,p,v){const k='_s'+p;if(e[k]!==v){e[k]=v;e.style.setProperty(p,v)}}
 function N(e,v){if(e._n!==v){e._n=v;e.className=v}}
 
-const FSR={timeout:'Telefon sterujący nie odpowiada, silniki zatrzymane',disconnect:'Rozłączono, silniki zatrzymane',battery:'Bateria krytyczna, start zablokowany',ota:'Trwa aktualizacja',runtime:'Przekroczony czas pracy rotora'};
-const ERR={bad_json:'Błędna ramka',bad_type:'Zły typ danych',out_of_range:'Wartość poza zakresem',unknown_cmd:'Nieznana komenda',too_long:'Za długa ramka',no_sensor:'Brak czujnika położenia',failsafe:'Failsafe aktywny',low_battery:FSR.battery,busy_ota:FSR.ota,busy:'Najpierw zatrzymaj silniki',twist_limit:'Limit skrętu, wróć w drugą stronę',endstop:'Krańcówka, wróć w drugą stronę',stale:'Pominięto komendę wysłaną przed STOP'};
+const FSR={timeout:'No signal from the controlling device, motors stopped',disconnect:'Disconnected, motors stopped',battery:'Battery critical, start blocked',ota:'Firmware update in progress',runtime:'Rotor run time limit reached'};
+const ERR={bad_json:'Invalid frame',bad_type:'Wrong data type',out_of_range:'Value out of range',unknown_cmd:'Unknown command',too_long:'Frame too long',no_sensor:'No position sensor',failsafe:'Failsafe active',low_battery:FSR.battery,busy_ota:FSR.ota,busy:'Stop the motors first',twist_limit:'Cable twist limit reached, turn back the other way',endstop:'Endstop reached, turn back the other way',stale:'Skipped a command sent before STOP'};
 // out_of_range from a rule, by field (else command)
-const XR={batCrit:'Próg krytyczny musi być niższy niż próg ostrzeżenia',batFull:'Napięcie 100 % musi być wyższe niż 0 %',yaw:'Pomiar za krótki: obróć gondolę o pełny obrót i naciśnij ZAKOŃCZ'};
-const OF={rotor:'Rotor',yaw:'Gondola',cfg:'Ustawienia',stop:'Stop',reboot:'Restart'};
-const EV={fs_timeout:'Failsafe: brak sygnału',fs_disconnect:'Failsafe: rozłączenie',fs_battery:'Failsafe: bateria',fs_ota:'Failsafe: aktualizacja',fs_runtime:'Limit czasu pracy rotora',fs_clear:'Failsafe zdjęty',estop:'Stop awaryjny',bat_low:'Niska bateria',bat_crit:'Bateria krytyczna',bat_ok:'Bateria w normie',bat_absent:'Brak baterii',ota_ok:'Aktualizacja udana',ota_fail:'Błąd aktualizacji',twist_limit:'Limit skrętu',endstop:'Krańcówka',yaw_deadman:'Gondola: brak podtrzymania',yaw_zero:'Pozycja wyzerowana',yaw_cal:'Kalibracja obrotu zapisana',goto_done:'Gondola na pozycji',goto_timeout:'Jazda do kąta: limit czasu',goto_abort:'Jazda do kąta przerwana',goto_fail:'Jazda do kąta niemożliwa: limit skrętu',as5600_err:'Błąd czujnika AS5600',as5600_ok:'Czujnik AS5600 działa',as5600_magnet:'AS5600: magnes za słaby lub za silny',yaw_sens_dir:'AS5600 liczy odwrotnie: przełącz AS5600 odwrotnie',yaw_zeroed:'Pozycja wyzerowana po zmianie kierunku',yaw_end_dir:'Krańcówka po złej stronie: zamień lewo / prawo lub kable',cfg_reset:'Ustawienia fabryczne',cfg_invalid:'Błędne ustawienia, przywrócono domyślne',nvs_open:'Błąd pamięci ustawień',nvs_write:'Błąd zapisu ustawień',nvs_fail:'Błąd zapisu pozycji gondoli',pwm_fail:'Błąd PWM silnika',ota_start:'Aktualizacja: silniki zablokowane',bat_present:'Bateria podłączona',reboot:'Restart sterownika',boot:'Start sterownika'};
+const XR={batCrit:'Critical threshold must be below the warning threshold',batFull:'Voltage at 100% must be above voltage at 0%',yaw:'Measurement too short: turn the nacelle one full turn and press FINISH'};
+const OF={rotor:'Rotor',yaw:'Nacelle',cfg:'Settings',stop:'Stop',reboot:'Restart'};
+const EV={fs_timeout:'Failsafe: no signal',fs_disconnect:'Failsafe: disconnected',fs_battery:'Failsafe: battery',fs_ota:'Failsafe: firmware update',fs_runtime:'Rotor run time limit reached',fs_clear:'Failsafe cleared',estop:'Emergency stop',bat_low:'Low battery',bat_crit:'Battery critical',bat_ok:'Battery OK',bat_absent:'No battery reading',ota_ok:'Update complete',ota_fail:'Update failed',twist_limit:'Cable twist limit reached',endstop:'Endstop reached',yaw_deadman:'Nacelle: hold signal lost',yaw_zero:'Position zeroed',yaw_cal:'Rotation calibration saved',goto_done:'Nacelle on target',goto_timeout:'Go to angle: timed out',goto_abort:'Go to angle aborted',goto_fail:'Go to angle blocked by the cable twist limit',as5600_err:'AS5600 sensor error',as5600_ok:'AS5600 sensor OK',as5600_magnet:'AS5600: magnet too weak or too strong',yaw_sens_dir:'AS5600 counts backwards: turn on AS5600 reversed',yaw_zeroed:'Position zeroed after direction change',yaw_end_dir:'Endstop on the wrong side: swap left / right or the cables',cfg_reset:'Factory settings restored',cfg_invalid:'Invalid settings, defaults restored',nvs_open:'Settings storage error',nvs_write:'Settings write error',nvs_fail:'Nacelle position write error',pwm_fail:'Motor PWM error',ota_start:'Update: motors locked',bat_present:'Battery connected',reboot:'Controller restart',boot:'Controller started'};
 // OTA errors the panel can get
-const OTE={'firmware image sent as fs':1,'not a firmware image':1,'empty file':'pusty plik','incomplete upload':'wysyłanie przerwane'};
+const OTE={'firmware image sent as fs':1,'not a firmware image':1,'empty file':'empty file','incomplete upload':'upload interrupted'};
 const EV_TOAST_I=/^(yaw_cal|yaw_zero|goto_done|ota_ok|cfg_reset)$/;
-const SENS={none:'BEZ CZUJNIKA',endstops:'KRAŃCÓWKI',as5600:'AS5600'};
-const eMsg=o=>o.msg=='queue full'?'kolejka pełna, spróbuj ponownie':o.code=='out_of_range'&&XR[o.field||o.of]||ERR[o.code]||o.code||'błąd';
+const SENS={none:'NO SENSOR',endstops:'ENDSTOPS',as5600:'AS5600'};
+const eMsg=o=>o.msg=='queue full'?'queue full, try again':o.code=='out_of_range'&&XR[o.field||o.of]||ERR[o.code]||o.code||'error';
 const errText=o=>(OF[o.of]?OF[o.of]+': ':'')+eMsg(o);
 
 // settings: [key, label, type n/b/s/t/p (number, bool, select: min = options, text,
 // password), min, max, step, unit, flags 1 advanced, 2 restart, 4 shown / 1000]
 const TXP=[8,20,28,34,44,52,60,68,74,76,78];
 const FD={
- R:[['rotorMax','Prędkość maksymalna','n',10,100,5,'%'],['rotorRamp','Czas rampy 0-100 %','n',50,10000,50,'ms'],['rotorMaxRun','Limit czasu pracy (0 = bez limitu)','n',0,3600,10,'s'],['rotorMin','Martwa strefa silnika','n',0,60,1,'%',1],['rotorDuty','Sufit PWM','n',50,255,5,'/255',1],['rotorRev','Odwróć kierunek (tylko na postoju)','b',0,0,0,'',1]],
- Y:[['yawSpeed','Domyślna prędkość','n',20,100,5,'%'],['yawMaxBal','Limit skrętu (0 = wył.)','n',0,600,.5,'s',4],['yawMs360','Czas pełnego obrotu','n',0,600,.1,'s',4],['yawInvert','Zamień lewo / prawo (zeruje)','b'],['yawMaxDeg','Limit skrętu AS5600 (0 = wył.)','n',0,3600,30,'°',1],['yawSensRev','AS5600 odwrotnie','b',0,0,0,'',1],['yawDuty','Sufit PWM','n',50,255,5,'/255',1]],
- B:[['batLow','Próg ostrzeżenia','n',3,20,.05,'V',4],['batCrit','Próg krytyczny (stop)','n',3,20,.05,'V',4],['batEmpty','Napięcie 0 %','n',3,20,.05,'V',4],['batFull','Napięcie 100 %','n',3,20,.05,'V',4],['batCal','Współczynnik kalibracji','n',.5,1.5,.001,'×',1]],
- N:[['name','Nazwa (pusta = Turbina-XXXX)','t',0,24,0,'',2],['apPass','Hasło sieci (8-63 znaki)','p',8,63,0,'',2],['apChan','Kanał WiFi','n',1,13,1,'',2],['txPower','Moc nadajnika','s',TXP.map(q=>[q,String(q/4).replace('.',',')+' dBm'])],['bleMode','Bluetooth','s',[[0,'Wyłączony'],[1,'Auto (gdy nikt na WiFi)'],[2,'Zawsze']]],['captive','Captive portal','b',0,0,0,'',2]],
- F:[['fsTimeout','Zatrzymanie po braku sygnału','n',400,1000,50,'ms']],
- S:[['led','Dioda statusu','b']]
+ R:[['rotorMax','Maximum speed','n',10,100,5,'%'],['rotorRamp','Ramp time 0-100%','n',50,10000,50,'ms'],['rotorMaxRun','Run time limit (0 = no limit)','n',0,3600,10,'s'],['rotorMin','Motor dead zone','n',0,60,1,'%',1],['rotorDuty','Max PWM duty','n',50,255,5,'/255',1],['rotorRev','Reverse direction (only when stopped)','b',0,0,0,'',1]],
+ Y:[['yawSpeed','Default speed','n',20,100,5,'%'],['yawMaxBal','Twist limit (0 = off)','n',0,600,.5,'s',4],['yawMs360','Full turn time','n',0,600,.1,'s',4],['yawInvert','Swap left / right (zeroes position)','b'],['yawMaxDeg','AS5600 twist limit (0 = off)','n',0,3600,30,'°',1],['yawSensRev','AS5600 reversed','b',0,0,0,'',1],['yawDuty','Max PWM duty','n',50,255,5,'/255',1]],
+ B:[['batLow','Warning threshold','n',3,20,.05,'V',4],['batCrit','Critical threshold (stop)','n',3,20,.05,'V',4],['batEmpty','Voltage at 0%','n',3,20,.05,'V',4],['batFull','Voltage at 100%','n',3,20,.05,'V',4],['batCal','Calibration factor','n',.5,1.5,.001,'×',1]],
+ N:[['name','Name (empty = Turbina-XXXX)','t',0,24,0,'',2],['apPass','Network password (8-63 characters)','p',8,63,0,'',2],['apChan','WiFi channel','n',1,13,1,'',2],['txPower','Transmit power','s',TXP.map(q=>[q,q/4+' dBm'])],['bleMode','Bluetooth','s',[[0,'Off'],[1,'Auto (when no one is on WiFi)'],[2,'Always on']]],['captive','Captive portal','b',0,0,0,'',2]],
+ F:[['fsTimeout','Signal loss timeout','n',400,1000,50,'ms']],
+ S:[['led','Status LED','b']]
 };
 const FX={};// key -> {d, e input, x box, r error}
 
@@ -377,8 +377,8 @@ function fHtml(d){
  else if(t=='b')c=`<button class=tg id=${id} role=switch></button>`;
  else if(t=='s')c=`<select id=${id}>${mn.map(o=>`<option value="${o[0]}">${o[1]}</option>`).join('')}</select>`;
  else if(t=='t')c=`<input id=${id} maxlength=${mx} placeholder=Turbina-XXXX autocomplete=off autocapitalize=off spellcheck=false>`;
- else c=`<div class=nr><input id=${id} type=password maxlength=63 autocomplete=new-password placeholder="nowe hasło"><button class="b t" data-a=pass>ZAPISZ</button></div>`;
- return `<div class="f${fl&1?' a':''}${t=='b'?' bo':''}" data-k=${k}><label for=${id}>${l}${fl&2?'<em>WYMAGA RESTARTU</em>':''}</label>${c}<small class=fh id="h_${k}"></small><div class=fe></div></div>`;
+ else c=`<div class=nr><input id=${id} type=password maxlength=63 autocomplete=new-password placeholder="new password"><button class="b t" data-a=pass>SAVE</button></div>`;
+ return `<div class="f${fl&1?' a':''}${t=='b'?' bo':''}" data-k=${k}><label for=${id}>${l}${fl&2?'<em>RESTART REQUIRED</em>':''}</label>${c}<small class=fh id="h_${k}"></small><div class=fe></div></div>`;
 }
 for(const g in FD){
  const h=D.querySelector(`[data-f=${g}]`);
@@ -401,11 +401,11 @@ function wsOpen(){
  let w;
  try{w=new WebSocket(WSU)}catch(e){clog('e','WS: '+e.message);wsFail();return}
  ws=w;
- wsTo=setTimeout(()=>{if(ws===w&&!wsOk){clog('w','WS: brak odpowiedzi');wsDrop()}},3000);
+ wsTo=setTimeout(()=>{if(ws===w&&!wsOk){clog('w','WS: no response');wsDrop()}},3000);
  w.onopen=()=>{
   if(ws!==w)return;
   clearTimeout(wsTo);wsOk=true;everLinked=true;back=2000;httpOn=false;lastRx=now();hQ=[];
-  clog('i','WebSocket połączony');
+  clog('i','WebSocket connected');
   if($('dL').open)send({t:'log'});
   dirty();
  };
@@ -416,7 +416,7 @@ function wsDrop(){
  const w=ws,was=wsOk;
  ws=null;wsOk=false;clearTimeout(wsTo);
  if(w){w.onopen=w.onmessage=w.onclose=w.onerror=null;try{w.close()}catch(e){}}
- if(was){clog('w','WebSocket rozłączony');if(motorsOn())toast('Połączenie WebSocket przerwane, silniki zatrzymane','w');linkLost()}
+ if(was){clog('w','WebSocket disconnected');if(motorsOn())toast('WebSocket connection lost, motors stopped','w');linkLost()}
  wsFail();
 }
 function wsFail(){
@@ -439,7 +439,7 @@ function poll(){
   if(!o||o.t!='state'||wsOk)return;
   const first=!httpOk();
   hOkT=now();everLinked=true;rx(o);
-  if(first){clog('i','Tryb HTTP');hSend({t:'info'},'')}
+  if(first){clog('i','HTTP mode');hSend({t:'info'},'')}
  }).catch(()=>{}).finally(()=>{hBusy=0});
 }
 // HTTP: a POST (own TCP connection) can overtake an earlier one. One at a time
@@ -481,7 +481,7 @@ async function bleGo(pick){
   on(n,'characteristicvaluechanged',bNote);
   await n.startNotifications();
   bOk=true;bQ=[];bBack=2000;everLinked=true;lastRx=now();
-  clog('i','BLE połączony: '+bDev.name);
+  clog('i','BLE connected: '+bDev.name);
  }catch(e){
   if(e.name!='NotFoundError')clog('e','BLE: '+e.message);
   if(bWant&&bDev&&!bOk)bRetry();
@@ -492,7 +492,7 @@ function bNote(e){rxT(dec.decode(e.target.value))}
 function bLost(){
  const was=bOk;
  bOk=false;bCh=null;bQ=[];
- if(was){clog('w','BLE rozłączony');linkLost()}
+ if(was){clog('w','BLE disconnected');linkLost()}
  if(bWant)bRetry();
  dirty();
 }
@@ -512,7 +512,7 @@ async function bPump(){
  if(bBusy||!bCh||!bQ.length)return;
  bBusy=true;
  const x=bQ.shift(),d=enc.encode(x.s);
- try{await(bCh.writeValueWithoutResponse?bCh.writeValueWithoutResponse(d):bCh.writeValue(d))}catch(e){clog('e','BLE zapis: '+e.message)}
+ try{await(bCh.writeValueWithoutResponse?bCh.writeValueWithoutResponse(d):bCh.writeValue(d))}catch(e){clog('e','BLE write: '+e.message)}
  bBusy=false;bPump();
 }
 
@@ -530,7 +530,7 @@ function send(o,k=0){
  return ok;
 }
 function ping(){const id=++pid;pingT[id]=now();delete pingT[id-20];send({t:'ping',id},1)}
-function rxT(t){let o;try{o=JSON.parse(t)}catch(e){clog('e','Zła ramka');return}if(o&&o.t)rx(o)}
+function rxT(t){let o;try{o=JSON.parse(t)}catch(e){clog('e','Invalid frame');return}if(o&&o.t)rx(o)}
 function rx(o){
  lastRx=now();
  switch(o.t){
@@ -559,7 +559,7 @@ function onState(o){
 // settings: fill, commit, replies
 let cid=0,otType='fw',ySet=0;
 const cPend={};// id -> {k,v,c sent,a HTTP ack}
-function tgSet(e,v){K(e,'on',v);T(e,v?'WŁ':'WYŁ');A(e,'aria-checked',v?'true':'false')}
+function tgSet(e,v){K(e,'on',v);T(e,v?'ON':'OFF');A(e,'aria-checked',v?'true':'false')}
 // f: also a focused input
 function fFill(k,f){
  const x=FX[k];
@@ -567,7 +567,7 @@ function fFill(k,f){
  const v=cfg[k],t=x.d[2],e=x.e;
  if(t=='b')return tgSet(e,v);
  if(D.activeElement===e&&!f||t=='p')return;
- e.value=t=='n'?dc(x.d[7]&4?+(v/1000).toFixed(3):v):v;
+ e.value=t=='n'&&x.d[7]&4?+(v/1000).toFixed(3):v;
 }
 function cOk(k){const x=FX[k].x;K(x,'pd',0);K(x,'ok',1);setTimeout(()=>K(x,'ok',0),900)}
 function onCfg(o){
@@ -579,13 +579,13 @@ function onCfg(o){
   if(p.a?o[p.k]!==p.v&&now()-p.a<250:L=='http'&&now()-p.c<2000){h[p.k]=1;continue}
   delete cPend[i];
   if(p.a&&o[p.k]===p.v)cOk(p.k);
-  else if(p.a){fErr(p.k,'Sterownik nie przyjął wartości');h[p.k]=2}
+  else if(p.a){fErr(p.k,'Controller rejected the value');h[p.k]=2}
  }
  for(const k in FX)if(h[k]!=1){K(FX[k].x,'pd',0);fFill(k,h[k])}
- T($('h_yawMaxBal'),o.yawMaxBal>0&&o.yawMs360>0?'≈ '+fx(o.yawMaxBal/o.yawMs360,1)+' obrotu w każdą stronę':'');
- T($('h_apPass'),o.apPassSet?'Hasło ustawione (nie jest wyświetlane)':'');
+ T($('h_yawMaxBal'),o.yawMaxBal>0&&o.yawMs360>0?'≈ '+fx(o.yawMaxBal/o.yawMs360,1)+' turns each way':'');
+ T($('h_apPass'),o.apPassSet?'Password set (not shown)':'');
  if(!ySet&&num(o.yawSpeed)){ySl.value=o.yawSpeed;ySet=1;ysDraw()}
- T($('cwR'),o.yawMs360>0?fx(o.yawMs360/1000,2)+' s':'NIEZNANY');
+ T($('cwR'),o.yawMs360>0?fx(o.yawMs360/1000,2)+' s':'NOT SET');
  for(const e of $('bT').children)K(e,'on',+e.dataset.v===o.batType);
 }
 function fErr(k,m){const x=FX[k];if(x)T(x.r,m)}
@@ -598,18 +598,18 @@ function commit(k,v){
   if(e){fErr(k,e);fFill(k,1);return}
   o.batType=2;
  }
- if(!cfg||!send(o)){fErr(k,'Brak połączenia');fFill(k,1);return}
+ if(!cfg||!send(o)){fErr(k,'Not connected');fFill(k,1);return}
  cPend[cid]={k,v,c:now()};K(x.x,'pd',1);
 }
 function fCommit(k){
  const x=FX[k],[,,t,mn,mx,sp,u,fl]=x.d,e=x.e;
  if(t=='n'){
   const v=pn(e.value);
-  if(!(v>=mn&&v<=mx)){fErr(k,'Zakres '+mn+'..'+mx+' '+u);fFill(k,1);return}
+  if(!(v>=mn&&v<=mx)){fErr(k,'Range '+mn+'..'+mx+' '+u);fFill(k,1);return}
   commitIf(k,fl&4?Math.round(v*1000):sp>=1?Math.round(v):+v.toFixed(3));
  }else if(t=='s')commitIf(k,+e.value);
  else if(t=='t'){
-  if(!/^[\x20-\x21\x23-\x5b\x5d-\x7e]*$/.test(e.value)){fErr(k,'Tylko litery łacińskie, cyfry i znaki ASCII bez " i \\');return}
+  if(!/^[\x20-\x21\x23-\x5b\x5d-\x7e]*$/.test(e.value)){fErr(k,'Only ASCII letters, digits and symbols, no " or \\');return}
   commitIf(k,e.value);
  }
 }
@@ -620,7 +620,7 @@ function onAck(o){
  // HTTP acks the frame only: check the cfg
  if(link()=='http'&&k!='apPass'){p.a=now();setTimeout(()=>send({t:'cfg',get:true}),400);return}
  delete cPend[o.id];cOk(k);
- if(k=='apPass'){FX[k].e.value='';toast('Hasło zapisane, zadziała po restarcie (też dla OTA)','ok')}
+ if(k=='apPass'){FX[k].e.value='';toast('Password saved. It takes effect after a restart (OTA too).','ok')}
 }
 function onErr(o){
  const m=errText(o),p=cPend[o.id];
@@ -658,13 +658,13 @@ function fmtUp(ms){const s=Math.floor(ms/1000),d=Math.floor(s/86400);return(d?d+
 function logDraw(){
  if(!$('dL').open)return;
  const li=(c,t,h,m)=>`<li class=${c}><time>${t}</time>${h}${m?'<small>'+esc(m)+'</small>':''}</li>`;
- let h='<h4>STEROWNIK</h4>'+(link()=='ble'?'<li>BLE: tylko najnowsze wpisy, cały log przez WiFi</li>':'')+(slog.length?slog.slice().reverse().map(i=>li(i.lvl,fmtUp(i.ms),'<b>'+esc(EV[i.code]||i.code)+'</b>',i.msg)).join(''):'<li>brak wpisów</li>');
- h+='<h4>PANEL</h4>'+(clg.length?clg.map(i=>li(i.l,i.d.toTimeString().slice(0,8),esc(i.m))).join(''):'<li>brak wpisów</li>');
+ let h='<h4>CONTROLLER</h4>'+(link()=='ble'?'<li>BLE: latest entries only, full log over WiFi</li>':'')+(slog.length?slog.slice().reverse().map(i=>li(i.lvl,fmtUp(i.ms),'<b>'+esc(EV[i.code]||i.code)+'</b>',i.msg)).join(''):'<li>no entries</li>');
+ h+='<h4>PANEL</h4>'+(clg.length?clg.map(i=>li(i.l,i.d.toTimeString().slice(0,8),esc(i.m))).join(''):'<li>no entries</li>');
  $('lg').innerHTML=h;
 }
 function infoDraw(){
- const i=info||{},rows=[['Nazwa',i.name],['Firmware',i.fw&&i.fw+' ('+i.build+')'],['Układ',i.chip],['MAC',i.mac],['Czujnik gondoli',SENS[i.sensor]||i.sensor],['Ostatni reset',i.reset],['Pamięć wolna',num(i.heap)&&Math.round(i.heap/1024)+' kB (min '+Math.round(i.heapMin/1024)+' kB)'],['Czas pracy','<span id="iUp">--</span>'],['Protokół',i.v&&'v'+i.v]];
- $('inf').innerHTML=rows.filter(r=>r[1]).map(r=>`<dt>${r[0]}</dt><dd>${r[0]=='Czas pracy'?r[1]:esc(r[1])}</dd>`).join('');
+ const i=info||{},rows=[['Name',i.name],['Firmware',i.fw&&i.fw+' ('+i.build+')'],['Chip',i.chip],['MAC',i.mac],['Nacelle sensor',SENS[i.sensor]||i.sensor],['Last reset',i.reset],['Free memory',num(i.heap)&&Math.round(i.heap/1024)+' kB (min '+Math.round(i.heapMin/1024)+' kB)'],['Uptime','<span id="iUp">--</span>'],['Protocol',i.v&&'v'+i.v]];
+ $('inf').innerHTML=rows.filter(r=>r[1]).map(r=>`<dt>${r[0]}</dt><dd>${r[0]=='Uptime'?r[1]:esc(r[1])}</dd>`).join('');
 }
 
 let lastToast='',lastToastT=0;
@@ -715,7 +715,7 @@ $('rBtn').onclick=()=>{
  if(blk)return;
  vib(15);
  if(rotRun()){thrClear();rotSend(0,2)}
- else if(sp<=0)toast('Ustaw prędkość większą od 0','w');
+ else if(sp<=0)toast('Set a speed above 0','w');
  else rotSend(Math.min(sp,rotMax()),2);
 };
 $('rBrk').onclick=()=>{if(blk)return;thrClear();vib(15);rLast=0;rLastT=now();send({t:'rotor',speed:0,brake:true},2)};
@@ -763,7 +763,7 @@ $('gGo').onclick=()=>{
  if(blk)return;
  if(st&&st.yaw&&num(st.yaw.goto))return yStop();
  const v=pn($('gIn').value);
- if(!(v>=0&&v<360))return toast('Podaj kąt 0..359°','w');
+ if(!(v>=0&&v<360))return toast('Enter an angle 0..359°','w');
  send({t:'yaw',goto:v});
 };
 on($('gt'),'click',e=>{const b=e.target.closest('[data-g]');if(b&&!blk){$('gIn').value=b.dataset.g;send({t:'yaw',goto:+b.dataset.g})}});
@@ -781,7 +781,7 @@ function estop(){
  if(WSON)hSend({t:'stop'},'S');
  lastTx=now();
  vib(40);es.classList.add('fl');setTimeout(()=>es.classList.remove('fl'),300);
- clog('w','STOP WSZYSTKO');
+ clog('w','EMERGENCY STOP');
 }
 on(es,'pointerdown',e=>{e.preventDefault();estop()});
 on(es,'click',estop);
@@ -792,27 +792,27 @@ const otMsg=(m,c)=>{T($('oM'),m);$('oM').style.color=c?'var(--'+c+')':''};
 const act={
  retry(){back=2000;if(WSON)wsOpen();if(bWant){clearTimeout(bT);bleGo(false)}},
  ble(){if(bOk||bWant)bleOff();else bleGo(true)},
- reboot(){send({t:'reboot'})&&toast('Restart sterownika...','ok')},
- freset(){send({t:'cfg',reset:true})&&toast('Przywracanie ustawień fabrycznych','ok')},
+ reboot(){send({t:'reboot'})&&toast('Restarting the controller...','ok')},
+ freset(){send({t:'cfg',reset:true})&&toast('Restoring factory settings...','ok')},
  zero(){send({t:'yaw',zero:true})},
  cal(b){send({t:'yaw',cal:b.dataset.v})},
  log(){send({t:'log'})},
  bt(b){const o={t:'cfg',id:++cid,batType:+b.dataset.v};send(o)},
  bcal(){
   const m=pn($('bMs').value),b=st&&st.bat,e=$('bMe');
-  if(!(m>2&&m<25))return T(e,'Wpisz zmierzone napięcie w V');
-  if(!b||!(b.mv>0)||b.present===false)return T(e,'Brak odczytu baterii');
-  if(!cfg)return T(e,'Brak konfiguracji');
-  if(motorsOn())return T(e,'Zatrzymaj silniki, pod obciążeniem napięcie siada');
+  if(!(m>2&&m<25))return T(e,'Enter the measured voltage in V');
+  if(!b||!(b.mv>0)||b.present===false)return T(e,'No battery reading');
+  if(!cfg)return T(e,'Settings not loaded yet');
+  if(motorsOn())return T(e,'Stop the motors first, the voltage sags under load');
   const f=cfg.batCal*m/(b.mv/1000);
-  if(!(f>=.5&&f<=1.5))return T(e,'Współczynnik '+fx(f,2)+' poza 0,5..1,5, sprawdź pomiar');
+  if(!(f>=.5&&f<=1.5))return T(e,'Factor '+fx(f,2)+' outside 0.5..1.5, check the reading');
   T(e,'');
   commit('batCal',Math.round(f*1000)/1000);
   $('bMs').value='';
  },
  pass(){
   const e=FX.apPass.e,v=e.value;
-  if(v.length<8||v.length>63||!/^[\x20-\x21\x23-\x5b\x5d-\x7e]+$/.test(v))return fErr('apPass','Hasło: 8-63 znaki ASCII bez " i \\');
+  if(v.length<8||v.length>63||!/^[\x20-\x21\x23-\x5b\x5d-\x7e]+$/.test(v))return fErr('apPass','Password: 8-63 ASCII characters, no " or \\');
   commit('apPass',v);
  },
  pf(b){const k=b.dataset.v;P[k]=P[k]?0:1;saveP();prefDraw();if(k=='wake')wake()},
@@ -820,30 +820,30 @@ const act={
  fsc(){const d=D.documentElement;if(D.fullscreenElement)D.exitFullscreen();else if(d.requestFullscreen)d.requestFullscreen().catch(()=>{})},
  ota(){
   const f=$('oF').files[0];
-  if(!f)return otMsg('Wybierz plik .bin','al');
-  if(motorsOn())return otMsg('Najpierw zatrzymaj silniki','al');
+  if(!f)return otMsg('Choose a .bin file','al');
+  if(motorsOn())return otMsg('Stop the motors first','al');
   let au;
-  try{au='Basic '+btoa('admin:'+$('oP').value)}catch(e){return otMsg('Hasło: tylko znaki ASCII','al')}
+  try{au='Basic '+btoa('admin:'+$('oP').value)}catch(e){return otMsg('Password: ASCII characters only','al')}
   const x=new XMLHttpRequest(),fd=new FormData();
   fd.append('file',f,f.name);
   x.open('POST',HB+'/update?type='+otType);
   x.setRequestHeader('Authorization',au);
-  x.upload.onprogress=e=>{if(e.lengthComputable){V($('oB'),'width',(e.loaded/e.total*100).toFixed(1)+'%');otMsg('Wysyłanie '+Math.round(e.loaded/e.total*100)+' %')}};
+  x.upload.onprogress=e=>{if(e.lengthComputable){V($('oB'),'width',(e.loaded/e.total*100).toFixed(1)+'%');otMsg('Uploading '+Math.round(e.loaded/e.total*100)+'%')}};
   x.onload=()=>{
    otBusy=0;
    let j={};
    try{j=JSON.parse(x.responseText)}catch(e){}
-   if(x.status==200&&j.ok){otMsg('Wgrano. Sterownik się restartuje, panel połączy się sam.','ok');clog('i','OTA '+otType+' OK')}
-   else{const m=OTE[j.error];otMsg(x.status==401?'Złe hasło sieci':x.status==409?'Silniki pracują albo trwa inna aktualizacja':'Błąd: '+(m==1?'plik innego rodzaju, zmień rodzaj':m||(j.error?'zapis obrazu nie powiódł się':'HTTP '+x.status)),'al');V($('oB'),'width','0')}
+   if(x.status==200&&j.ok){otMsg('Upload complete. The controller is restarting, the panel will reconnect by itself.','ok');clog('i','OTA '+otType+' OK')}
+   else{const m=OTE[j.error];otMsg(x.status==401?'Wrong network password':x.status==409?'Motors running or another update in progress':'Error: '+(m==1?'wrong file for the selected type':m||(j.error?'image write failed':'HTTP '+x.status)),'al');V($('oB'),'width','0')}
    dirty();
   };
-  x.onerror=()=>{otBusy=0;otMsg('Błąd połączenia podczas wysyłania','al');dirty()};
-  otBusy=1;otMsg('Wysyłanie...');x.send(fd);dirty();
+  x.onerror=()=>{otBusy=0;otMsg('Connection error during upload','al');dirty()};
+  otBusy=1;otMsg('Uploading...');x.send(fd);dirty();
  }
 };
 let otBusy=0;
 function arm(b){
- b._cf=1;b._ot=b.textContent;b.textContent='POTWIERDŹ?';b.classList.add('cf');
+ b._cf=1;b._ot=b.textContent;b.textContent='CONFIRM?';b.classList.add('cf');
  setTimeout(()=>{b._cf=0;b.textContent=b._ot;b.classList.remove('cf')},3000);
 }
 on(D,'click',e=>{
@@ -862,7 +862,7 @@ on(D,'click',e=>{
   let v=pn(x.e.value);
   if(isNaN(v))v=d[3];
   v=clamp(Math.round((v+step*s.dataset.s)/step)*step,d[3],d[4]);
-  x.e.value=dc(+v.toFixed(3));
+  x.e.value=+v.toFixed(3);
   clearTimeout(x.t);x.t=setTimeout(()=>fCommit(k),600);
  }
 });
@@ -905,19 +905,19 @@ const motorsOn=()=>!!(st&&st.rotor&&(st.rotor.target>0||st.rotor.actual>0)||st&&
 function draw(){
  rq=0;
  const t=now(),L=link(),sl=!!L&&t-lastRx>1000,s=st||{},r=s.rotor||{},y=s.yaw||{},b=s.bat||{},k=s.link||{},f=s.fs||{};
- blk=!L?'BRAK POŁĄCZENIA':sl?'BRAK DANYCH Z TURBINY':!st?'CZEKAM NA DANE':s.ota?'TRWA AKTUALIZACJA':b.crit?'BATERIA KRYTYCZNA':'';
+ blk=!L?'NOT CONNECTED':sl?'NO DATA FROM TURBINE':!st?'WAITING FOR DATA':s.ota?'FIRMWARE UPDATE IN PROGRESS':b.crit?'BATTERY CRITICAL':'';
  K(D.body,'stl',!L||sl);
 
- T($('lT'),!L?'OFFLINE':sl?'BRAK DANYCH':L.toUpperCase());
+ T($('lT'),!L?'OFFLINE':sl?'NO DATA':L.toUpperCase());
  N($('lL'),'led '+(!L?'r bl':sl?'a bl':L=='http'?'a':'g'));
- T($('sN'),(info&&info.name)||(bOk&&bDev&&bDev.name)||'TURBINA');
+ T($('sN'),(info&&info.name)||(bOk&&bDev&&bDev.name)||'TURBINE');
  const rs=k.rssi;
  T($('rV'),num(rs)?rs:'--');
  N($('rB'),'rs n'+(!num(rs)?0:rs>=-55?4:rs>=-65?3:rs>=-75?2:rs>=-85?1:0));
  T($('tV'),L&&rtt!=null?Math.round(rtt):'--');
  const pres=b.present!==false;
- T($('bV'),!st?'--':pres?b.pct+'%':'BRAK');
- T($('bM'),num(b.mv)&&pres?fx(b.mv/1000,2)+' V':'BATERIA');
+ T($('bV'),!st?'--':pres?b.pct+'%':'NONE');
+ T($('bM'),num(b.mv)&&pres?fx(b.mv/1000,2)+' V':'BATTERY');
  N($('bB'),'bb'+(b.crit?' r':b.low?' a':''));
  V($('bF'),'width',(pres&&num(b.pct)?b.pct:0)+'%');
 
@@ -925,29 +925,29 @@ function draw(){
  if(HTTPS&&!bOk&&!bWant){}
  else if(!L){
   const at=bWant?bAt:retryAt,sec=at?Math.max(0,Math.ceil((at-t)/1000)):0;
-  if(!everLinked)bn.push(['in','ŁĄCZENIE Z TURBINĄ',bConn?'Łączenie BLE...':'Szukam sterownika...']);
-  else bn.push(['al','POŁĄCZENIE UTRACONE',bConn||(ws&&!wsOk)?'Łączenie...':'Ponowna próba za '+sec+' s',['PONÓW','retry']]);
- }else if(sl)bn.push(['al','BRAK DANYCH','Sterownik nie odpowiada, sterowanie zablokowane']);
- if(f.active)bn.push(['fs','FAILSAFE',FSR[f.reason]||'Silniki zatrzymane']);
- if(b.crit&&f.reason!='battery')bn.push(['al','BATERIA KRYTYCZNA','Start zablokowany']);
- else if(b.low&&!b.crit)bn.push(['am','NISKI POZIOM BATERII',(num(b.mv)?fx(b.mv/1000,2)+' V, ':'')+'wymień lub naładuj baterię']);
- if(b.present===false)bn.push(['in','BRAK BATERII','Odczyt poniżej 2,5 V, zasilanie z USB?']);
- if(y.twist)bn.push(['am','LIMIT SKRĘTU','Przewody skręcone na maksimum, wróć w drugą stronę ('+(y.twist=='L'?'PRAWO ▶':'◀ LEWO')+')']);
- if(y.sensorOk===false)bn.push(y.sensor=='endstops'?['al','BŁĄD KRAŃCÓWEK','Obie zwarte lub po złej stronie: sprawdź kable i Zamień lewo / prawo']:['al','BŁĄD CZUJNIKA','Czujnik pozycji gondoli nie działa, praca jak bez czujnika']);
- if(y.cal)bn.push(['in','KALIBRACJA OBROTU','Obróć gondolę dokładnie o jeden pełny obrót',['ZAKOŃCZ','cal','stop'],['ANULUJ','cal','cancel']]);
- if(cfg&&cfg.reboot)bn.push(['am','WYMAGANY RESTART','Część zmian zadziała po restarcie',['RESTART','reboot','',1]]);
+  if(!everLinked)bn.push(['in','CONNECTING TO TURBINE',bConn?'Connecting BLE...':'Looking for the controller...']);
+  else bn.push(['al','CONNECTION LOST',bConn||(ws&&!wsOk)?'Connecting...':'Retrying in '+sec+' s',['RETRY','retry']]);
+ }else if(sl)bn.push(['al','NO DATA','Controller not responding, controls locked']);
+ if(f.active)bn.push(['fs','FAILSAFE',FSR[f.reason]||'Motors stopped']);
+ if(b.crit&&f.reason!='battery')bn.push(['al','BATTERY CRITICAL','Start blocked']);
+ else if(b.low&&!b.crit)bn.push(['am','LOW BATTERY',(num(b.mv)?fx(b.mv/1000,2)+' V, replace':'Replace')+' or charge the battery']);
+ if(b.present===false)bn.push(['in','NO BATTERY READING','Reading below 2.5 V. Running on USB power?']);
+ if(y.twist)bn.push(['am','TWIST LIMIT','Cable twist limit reached, turn back the other way ('+(y.twist=='L'?'RIGHT ▶':'◀ LEFT')+')']);
+ if(y.sensorOk===false)bn.push(y.sensor=='endstops'?['al','ENDSTOP FAULT','Both closed or on the wrong side: check the wiring and Swap left / right']:['al','SENSOR FAULT','Nacelle position sensor not working, continuing without it']);
+ if(y.cal)bn.push(['in','ROTATION CALIBRATION','Turn the nacelle exactly one full turn',['FINISH','cal','stop'],['CANCEL','cal','cancel']]);
+ if(cfg&&cfg.reboot)bn.push(['am','PENDING CHANGES','Restart required to apply network settings',['RESTART','reboot','',1]]);
  const key=J(bn);
  if(key!=bnKey){
   bnKey=key;
   $('bn').innerHTML=bn.map(([c,h,m,...bs])=>`<div class="bn ${c}"><i class="led ${c=='in'?'c':c=='am'?'a':'r bl'}"></i><div><b>${h}</b><span>${m}</span></div>${bs.map(x=>`<button class="b" data-a="${x[1]}" data-v="${x[2]||''}"${x[3]?' data-c':''}>${x[0]}</button>`).join('')}</div>`).join('');
  }
 
- // BLE card, BLE in the Panel drawer
+ // BLE card, BLE in the Interface drawer
  if(HTTPS){
   A($('bc'),'hidden',bOk);
   const bcb=$('bcB');
   A(bcb,'hidden',!BT);
-  T(bcb,bConn?'ŁĄCZENIE...':bWant?'ANULUJ':'POŁĄCZ BLE');
+  T(bcb,bConn?'CONNECTING...':bWant?'CANCEL':'CONNECT BLE');
   N($('bcL'),'led'+(bConn?' a bl':bWant?' r bl':''));
  }
 
@@ -959,9 +959,9 @@ function draw(){
  const rm=rotMax();
  A($('gH'),'d',rm<100?arc(gA(rm),120,96):'');
  T($('gV'),st?act0:'--');
- T($('gT'),st?'CEL '+tg+'%':'CEL --%');
+ T($('gT'),st?'TARGET '+tg+'%':'TARGET --%');
  const rc=$('rC'),ramp=act0!=tg;
- T(rc,!st?'--':tg==0&&act0==0?'STOP':ramp?'RAMPA':'PRACA');
+ T(rc,!st?'--':tg==0&&act0==0?'STOPPED':ramp?'RAMPING':'RUNNING');
  N(rc,'chip'+(!st?'':ramp?' a':tg>0?' g':''));
  T($('rRun'),num(r.run)?fmtT(r.run):'--:--');
  const mr=cfg&&cfg.rotorMaxRun;
@@ -989,12 +989,12 @@ function draw(){
  A($('cG'),'visibility',gt==null?'hidden':null);
  if(gt!=null)V($('cG'),'transform',`rotate(${gt}deg)`);
  N($('dI'),'di '+(y.moving||''));
- const mv=y.moving=='left'?'◀ LEWO':y.moving=='right'?'PRAWO ▶':'STOI';
+ const mv=y.moving=='left'?'◀ LEFT':y.moving=='right'?'RIGHT ▶':'IDLE';
  T($('yA'),ang!=null?ang+'°':est?'≈'+Math.round(ca)+'°':st?mv:'--');
- T($('yS'),!st?'CZUJNIK: --':est?'SZACUNEK Z CZASU':y.sensor?SENS[y.sensor]||y.sensor:'GONDOLA');
- T($('yV'),y.moving&&num(y.speed)?'PRĘDKOŚĆ '+y.speed+'%':'');
+ T($('yS'),!st?'SENSOR: --':est?'ESTIMATED FROM TIME':y.sensor?SENS[y.sensor]||y.sensor:'NACELLE');
+ T($('yV'),y.moving&&num(y.speed)?'SPEED '+y.speed+'%':'');
  const yc=$('yC');
- T(yc,!st?'--':y.cal?'KALIBRACJA':gt!=null?'DO '+gt+'°':mv);
+ T(yc,!st?'--':y.cal?'CALIBRATION':gt!=null?'TO '+gt+'°':mv);
  N(yc,'chip'+(y.cal||gt!=null?' c':y.moving?' a':''));
  // twist: degrees with a degree limit (or measured, no limit), else balance
  let tv=null,tm=0,deg=num(y.pos)&&(y.posMax>0||y.est===false&&!(y.balMax>0));
@@ -1002,7 +1002,7 @@ function draw(){
  A($('tw'),'hidden',tv==null);K($('tw'),'nl',!tm);
  if(tv!=null){
   const fm=v=>deg?(v>0?'+':'')+Math.round(v)+'°':(v>0?'+':'')+fx(v/1000,1)+' s',fr=tm?clamp(tv/tm,-1,1):0;
-  T($('twV'),tm?fm(tv)+' / '+fm(tm).replace('+','±'):fm(tv)+', LIMIT WYŁ.');
+  T($('twV'),tm?fm(tv)+' / '+fm(tm).replace('+','±'):fm(tv)+', LIMIT OFF');
   V($('twF'),'transform',`scaleX(${fr.toFixed(3)})`);
   K($('twF'),'h',Math.abs(fr)>=.9);
   T($('twA'),tm?fm(-tm):'');T($('twB'),tm?fm(tm):'');
@@ -1011,30 +1011,30 @@ function draw(){
  if(hold&&blk)yStop();
  A(ySl,'disabled',!!blk);
  A($('gt'),'hidden',ang==null);
- T($('gGo'),gt!=null?'STOP':'JEDŹ');
- T($('gtV'),gt!=null?'CEL '+gt+'°':'');
+ T($('gGo'),gt!=null?'STOP':'GO');
+ T($('gtV'),gt!=null?'TARGET '+gt+'°':'');
  for(const e of $('gt').querySelectorAll('.b'))A(e,'disabled',!!blk);
  T($('yW'),blk?'⚠ '+blk:'');
 
  const noCfg=!cfg||!L||sl;
  for(const e of $$('fieldset[data-c]'))A(e,'disabled',noCfg);
- const nc=!L?'Brak połączenia ze sterownikiem':L=='ble'?'Konfiguracja dostępna tylko przez WiFi':'Czekam na konfigurację...';
+ const nc=!L?'Not connected to the controller':L=='ble'?'Settings available over WiFi only':'Waiting for settings...';
  V(D.body,'--nc',J(nc));
  const as=y.sensor=='as5600';
  A($('cw'),'hidden',as);
  K(FX.yawMaxDeg.x,'a',!as);
- T(FX.yawMaxBal.x.firstChild,as?'Limit czasowy (gdy w ° = 0 lub awaria AS5600)':'Limit skrętu (0 = wył.)');
+ T(FX.yawMaxBal.x.firstChild,as?'Time limit (when the ° limit is 0 or the AS5600 fails)':'Twist limit (0 = off)');
  A($('cw0'),'hidden',!!y.cal);A($('cw1'),'hidden',!y.cal);
  T($('bxV'),num(b.mv)?fx(b.mv/1000,2)+' V · '+b.pct+'%':'--');
- T($('bxS'),!st?'--':!pres?'BRAK':b.crit?'KRYTYCZNA':b.low?'NISKA':'OK');
+ T($('bxS'),!st?'--':!pres?'NONE':b.crit?'CRITICAL':b.low?'LOW':'OK');
  const up=$('iUp');
  if(up)T(up,num(s.up)?fmtUp(s.up):info&&num(info.up)?fmtUp(info.up):'--');
  A($('oG'),'disabled',!!otBusy||!WSON||!L||L=='ble'||motorsOn()||!!s.ota);
  A($('ota'),'hidden',!WSON);
 
  const bp=$('bP');
- const bh=BT?`<p class=nt>${bOk?'Połączono z '+esc(bDev.name):bConn?'Łączenie...':bWant?'Ponowne łączenie...':'Nie połączono'}</p><button class="b wide" data-a=ble>${bOk||bWant?'ROZŁĄCZ BLE':'POŁĄCZ BLE'}</button>`
- :'<p class="nt">'+(HTTPS?NOBT:'Web Bluetooth wymaga HTTPS: użyj panelu z GitHub Pages albo flagi Chrome (opis w README).')+'</p>';
+ const bh=BT?`<p class=nt>${bOk?'Connected to '+esc(bDev.name):bConn?'Connecting...':bWant?'Reconnecting...':'Not connected'}</p><button class="b wide" data-a=ble>${bOk||bWant?'DISCONNECT BLE':'CONNECT BLE'}</button>`
+ :'<p class="nt">'+(HTTPS?NOBT:'Web Bluetooth needs HTTPS: open the panel from GitHub Pages or enable the Chrome flag (see README).')+'</p>';
  if(bp._h!==bh){bp._h=bh;bp.innerHTML=bh}
 }
 
@@ -1043,13 +1043,13 @@ let rT=0;
 setInterval(()=>{
  const t=now(),L=link();
  if(L&&t-lastTx>=280)ping();
- if(wsOk&&t-lastRx>3000){clog('w','WS: brak danych 3 s');wsDrop()}
- if(bOk&&t-lastRx>3000){clog('w','BLE: brak danych 3 s');lastRx=t;try{bDev.gatt.disconnect()}catch(e){}}
+ if(wsOk&&t-lastRx>3000){clog('w','WS: no data for 3 s');wsDrop()}
+ if(bOk&&t-lastRx>3000){clog('w','BLE: no data for 3 s');lastRx=t;try{bDev.gatt.disconnect()}catch(e){}}
  if(httpOn&&!wsOk&&!bOk&&!hBusy&&t-hPollT>=500)poll();
  if(t-rT>=250){rT=t;dirty()}
 },50);
 
-T($('pV'),'Panel v'+PANEL_V+' · protokół v1');
+T($('pV'),'Panel v'+PANEL_V+' · protocol v1');
 A($('wkB'),'hidden',!('wakeLock'in navigator));
 if(HTTPS){
  if(!BT)T($('bcN'),NOBT);

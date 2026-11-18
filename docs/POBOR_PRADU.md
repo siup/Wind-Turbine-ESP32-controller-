@@ -3,7 +3,7 @@
 Wyniki pomiarów z etapu 5 (patrz README, "Odbiór etapów"). Wpisz swoje wartości do tabeli, razem z płytką i wersją firmware, bo zależą od jednego i drugiego.
 
 Płytka: ............ (np. ESP32 DevKit V1)
-Firmware: ............ (z panelu: Konfiguracja, System, Firmware)
+Firmware: ............ (z panelu: SETTINGS, SYSTEM, wiersz Firmware)
 Zasilanie: ............ (np. bateria 9 V przez MP1584 na 5 V)
 
 | Stan | Napięcie [V] | Prąd [mA] | Uwagi |
@@ -25,4 +25,4 @@ Zasilanie: ............ (np. bateria 9 V przez MP1584 na 5 V)
 4. Rozruchu multimetr zwykle nie złapie. Jeśli masz miernik z funkcją MAX, użyj jej; jeśli nie, wpisz "nie zmierzono".
 5. Po pomiarach przepnij przewód multimetru z powrotem na gniazdo napięciowe, żeby nie zewrzeć baterii przy następnym pomiarze napięcia.
 
-Przy okazji warto sprawdzić w logu zdarzeń (panel, Log zdarzeń), czy przy rozruchu nie było resetu `brownout`. Jeśli był, opisz to w uwagach przy rozruchu.
+Przy okazji warto sprawdzić w logu zdarzeń (panel, EVENT LOG), czy przy rozruchu nie było resetu `brownout`. Jeśli był, opisz to w uwagach przy rozruchu.
